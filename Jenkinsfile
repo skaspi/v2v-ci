@@ -2,11 +2,13 @@
 
 stage('Deploy MIQ Nightly') {
     node {
-            ansiblePlaybook(
-            colorized: true,
+       ansiColor('xterm') {
+           ansiblePlaybook(
             playbook: 'deploy_ci.yml',
             extras: '-e @extra_vars.yml',
             hostKeyChecking: false,
-            unbuffered: true)
+            unbuffered: true,
+            colorized: true)
         }
     }
+}
