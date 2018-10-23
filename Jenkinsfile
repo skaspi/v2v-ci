@@ -17,7 +17,7 @@ stage('Deploy ManageIQ') {
     node {
        ansiColor('xterm') {
            ansiblePlaybook(
-            playbook: 'deploy_miq.yml',
+            playbook: 'miq_deploy.yml',
             extras: '-e @extra_vars.yml',
             hostKeyChecking: false,
             unbuffered: true,
