@@ -1,3 +1,5 @@
+#!groovy
+
 // true/false build parameter to define if we need to run MIQ nightly pre-checks
 def MIQ_NIGHTLY_PRE_CHECK = params.MIQ_NIGHTLY_PRE_CHECK
 // Override default image QCOW url set on ansible
