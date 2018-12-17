@@ -1,0 +1,27 @@
+---
+- name: Collect migration plan ID
+  uri:
+    url: "https://{{ inventory_hostname }}/api/service_templates/?filter[]=name={{ v2v_ci_migration_plan_name }}&expand=resources"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: GET
+    validate_certs: no
+  register: migration_plan_json
+
+- set_fact:
+    query: "resources[?name=='{{ v2v_ci_migration_plan_name }}'].id"
+
+- name: Extract migration plan ID from JSON
+  set_fact:
+    migration_plan_id: "{{ migration_plan_json.json | json_query(query) | first }}"
+
+- name: Order migration plan
+  uri:
+    url: "https://{{ inventory_hostname }}/api/service_templates/{{ migration_plan_id }}"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: POST
+    validate_certs: no
+    body_format: json
+    body:
+      action: order

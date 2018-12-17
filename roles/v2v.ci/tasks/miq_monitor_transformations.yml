@@ -1,0 +1,45 @@
+---
+- name: Check for active requests for transformation plan {{ v2v_ci_migration_plan_name }}
+  uri:
+    url: "https://{{ inventory_hostname }}/api/service_templates/?filter[]=type='ServiceTemplateTransformationPlan'&filter[]=name='{{ v2v_ci_migration_plan_name }}'&filter[]=active=true&expand=resources&attributes=name,description,miq_requests,options"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: GET
+    validate_certs: no
+  register: plan_requests_json
+  until: plan_requests_json.json.resources[0].miq_requests[0].request_state == 'active'
+  retries: 12
+  delay: 10
+
+# Pull latest request href if there are more than one
+- set_fact:
+    query: "resources[?name=='{{ v2v_ci_migration_plan_name }}'].miq_requests[0].href"
+
+- name: Extract request ID from JSON
+  set_fact:
+    plan_request_href: "{{ plan_requests_json.json | json_query(query) | first }}"
+
+- name: Check transformation plan {{ v2v_ci_migration_plan_name }} active requests status
+  uri:
+    url: "https://{{ inventory_hostname }}/api/requests?expand=resources&attributes=miq_request_tasks"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: POST
+    validate_certs: no
+    body_format: json
+    body:
+      action: query
+      resources:
+        - href: "{{ plan_request_href }}"
+  register: plan_status_json
+  until: plan_status_json.json.results[0].request_state == 'finished'
+  retries: 60
+  delay: 60
+
+- name: Check transformation plan {{ v2v_ci_migration_plan_name }} results
+  block:
+    - debug:
+        var: plan_status_json
+    - fail:
+        msg: "Transformations have failed for plan {{ v2v_ci_migration_plan_name }}" 
+  when: plan_status_json.json.results[0].status != 'Ok'

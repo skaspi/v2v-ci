@@ -1,0 +1,29 @@
+---
+- name: Check if ManageIQ image is present
+  stat:
+    path: "{{ miq_image_path }}/{{ miq_qcow_url | basename }}"
+    checksum_algorithm: sha256
+  register: miq_image
+
+- name: Download ManageIQ nightly image checksum file
+  get_url:
+    url: "{{ v2v_ci_miq_image_checksum_url }}"
+    dest: "{{ v2v_ci_miq_image_checksum_file }}"
+    force: yes
+  when: miq_image.stat.exists
+
+- name: Extract ManageIQ nightly checksum
+  shell: "grep -E 'manageiq-ovirt-master-[[:alnum:]]+-[[:alnum:]]+.qc2$' {{ v2v_ci_miq_image_checksum_file }} | awk '{ print $1 }'"
+  register: image_checksum
+  when: miq_image.stat.exists
+
+- name: Remove ManageIQ older images
+  file:
+    path: "{{ miq_image_path }}/{{ miq_qcow_url | basename }}"
+    state: absent
+  when: miq_image.stat.exists and image_checksum.stdout != miq_image.stat.checksum
+
+- name: Remove ManageIQ image checkum file
+  file:
+    path: "{{ v2v_ci_miq_image_checksum_file }}"
+    state: absent

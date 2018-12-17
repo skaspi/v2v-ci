@@ -1,0 +1,12 @@
+---
+- name: Remove existing ManageIQ/CloudForms instance if present
+  ovirt_vms:
+    auth:
+      username: "{{ engine_user }}"
+      password: "{{ engine_password }}"
+      hostname: "{{ engine_fqdn }}"
+      insecure: yes
+    state: absent
+    name: "{{ miq_vm_name }}"
+    cluster: "{{ miq_vm_cluster }}"
+  when: v2v_ci_miq_vm_force_remove

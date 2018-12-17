@@ -1,0 +1,21 @@
+---
+v2v_ci_miq_extra_providers:
+  - name: V2V VMware
+    type: ManageIQ::Providers::Vmware::InfraManager
+    hostname: vcenter.example.com
+    zone:
+      href: http://localhost:3000/api/zone/1
+    credentials:
+      userid: administrator@vsphere.local
+      password: secret
+v2v_ci_infra_mapping_name: "V2V_CI"
+v2v_ci_source_cluster: "V2V_vmware_cluster"
+v2v_ci_target_cluster: "V2V_ovirt_cluster"
+v2v_ci_source_datastore: "NFS_vmware_datastore"
+v2v_ci_target_datastore: "NFS_ovirt_datastore"
+v2v_ci_source_lan: "VM_vmware_network1"
+v2v_ci_target_lan: "VM_ovirt_network1"
+v2v_ci_migration_plan_name: "V2V_CI"
+v2v_ci_migration_plan_vms:
+  - "vm1"
+  - "vm2"

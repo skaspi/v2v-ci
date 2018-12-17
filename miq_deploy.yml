@@ -1,0 +1,7 @@
+---
+- name: Deploy the ManageIQ appliance
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - oVirt.manageiq
