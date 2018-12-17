@@ -1,0 +1,17 @@
+---
+action: create
+name: "{{ v2v_ci_infra_mapping_name }}"
+state: Draft
+description: "Created by V2V CI"
+transformation_mapping_items:
+  -
+    source: "/api/clusters/{{ source_cluster_id }}"
+    destination: "/api/clusters/{{ target_cluster_id }}"
+  -
+    source: "/api/data_stores/{{ source_datastore_id }}"
+    destination: "/api/data_stores/{{ target_datastore_id }}"
+{% for item in source_lan_id %}
+  -
+    source: "/api/lans/{{ item }}"
+    destination: "/api/lans/{{ target_lan_id }}"
+{% endfor %}

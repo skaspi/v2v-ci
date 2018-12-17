@@ -1,0 +1,55 @@
+---
+- name: Check if migration plan already exists
+  uri:
+    url: "https://{{ inventory_hostname }}/api/service_templates/?filter[]=name={{ v2v_ci_migration_plan_name }}&expand=resources"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: GET
+    validate_certs: no
+  register: migration_plan_json
+
+- block:
+
+  - name: Collect transformation mapping ID
+    uri:
+      url: "https://{{ inventory_hostname }}/api/transformation_mappings/?filter[]=name={{ v2v_ci_infra_mapping_name }}&expand=resources"
+      user: "{{ miq_app_username | default('admin') }}"
+      password: "{{ miq_app_password | default('smartvm') }}"
+      method: GET
+      validate_certs: no
+    register: infra_mapping_json
+
+  - set_fact:
+      query: "resources[?name=='{{ v2v_ci_infra_mapping_name }}'].id"
+
+  - name: Extract infra mapping ID from JSON
+    set_fact:
+      infra_mapping_id: "{{ infra_mapping_json.json | json_query(query) | first }}"
+
+  - name: Collect target VM ids
+    uri:
+      url: "https://{{ inventory_hostname }}/api/vms/?filter[]=name={{ item | regex_replace (' ', '%20') }}&expand=resources&attributes=name"
+      user: "{{ miq_app_username | default('admin') }}"
+      password: "{{ miq_app_password | default('smartvm') }}"
+      method: GET
+      validate_certs: no
+    register: vm_ids_json
+    with_items: "{{ v2v_ci_migration_plan_vms }}"
+
+  - set_fact:
+      vm_query: "[*].json.resources[*].id"
+
+  - name: Extract target VM ids from JSON
+    set_fact:
+      vm_ids: "{{ vm_ids_json.results | json_query(vm_query) }}"
+
+  - name: Create migration plan
+    uri:
+      url: "https://{{ inventory_hostname }}/api/service_templates"
+      user: "{{ miq_app_username | default('admin') }}"
+      password: "{{ miq_app_password | default('smartvm') }}"
+      method: POST
+      validate_certs: no
+      body_format: json
+      body: "{{ lookup('template', 'templates/migration_plan.j2') | from_yaml }}"
+  when: migration_plan_json.json.subcount == 0

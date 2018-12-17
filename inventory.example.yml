@@ -1,0 +1,14 @@
+all:
+  children:
+    ovirt_conversion_hosts:
+      hosts:
+        rhelh01.example.com:
+          root_password: "secret"
+        rhelh02.example.com:
+          root_password: "secret"
+    vmware_esx_hosts:
+      hosts:
+        esx01.example.com:
+          root_password: "secret"
+        esx02.example.com:
+          root_password: "secret"

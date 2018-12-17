@@ -1,0 +1,19 @@
+---
+- name: Add ManageIQ/CloudForms host to in memory inventory
+  hosts: localhost
+  tasks:
+    - add_host:
+        name: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
+        ansible_user: root
+        ansible_ssh_pass: "{{ miq_vm_root_password }}"
+        ansible_pipelining: true
+  tags:
+    - always
+
+- name: Run ManageIQ/CloudForms step
+  hosts: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
+  gather_facts: no
+  vars:
+    ansible_ssh_common_args: -o PubkeyAuthentication=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  roles:
+    - { role: v2v.ci }

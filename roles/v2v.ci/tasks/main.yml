@@ -1,0 +1,51 @@
+---
+# Ansible 2.5 or higher:
+# Use dynamic includes only when looping is needed, they have no tag inheritance
+
+- import_tasks: miq_pre_check.yml
+  when: miq_pre_check|default(false)|bool == true
+  delegate_to: localhost
+  connection: local
+  tags:
+    - miq_pre_check
+
+- import_tasks: miq_pre_check_nightly.yml
+  when: miq_pre_check_nightly|default(false)|bool == true
+  delegate_to: localhost
+  connection: local
+  tags:
+    - miq_pre_check_nightly
+
+- include_tasks: miq_add_extra_providers.yml
+  with_items:
+    -  "{{ v2v_ci_miq_extra_providers }}"
+  tags:
+    - miq_add_extra_providers
+
+- include_tasks: miq_config_ovirt_conversion_hosts.yml
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+  tags:
+    - miq_config_ovirt_conversion_hosts
+
+- include_tasks: miq_config_vmware_esx_hosts.yml
+  with_items:
+    -  "{{ groups['vmware_esx_hosts'] }}"
+  tags:
+    - miq_config_vmware_esx_hosts
+
+- import_tasks: miq_config_infra_mappings.yml
+  tags:
+    - miq_config_infra_mappings
+
+- import_tasks: miq_config_migration_plan.yml
+  tags:
+    - miq_config_migration_plan
+
+- import_tasks: miq_order_migration_plan.yml
+  tags:
+    - miq_order_migration_plan
+
+- import_tasks: miq_monitor_transformations.yml
+  tags:
+    - miq_monitor_transformations

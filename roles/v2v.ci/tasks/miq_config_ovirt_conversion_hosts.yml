@@ -1,0 +1,70 @@
+---
+- block:
+    - name: Collect the list of host authentications
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ item }}&expand=resources&attributes=authentications"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: host_json
+      until: host_json.json.subcount == 1
+      retries: 12
+      delay: 5
+
+    - set_fact:
+        query: "resources[?name=='{{ item }}'].id"
+
+    - name: Extracting host id from JSON
+      set_fact:
+        host_id: "{{ host_json.json | json_query(query) | first }}"
+
+    - name: Add authentication for the host
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/{{ host_id }}/"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: edit
+          resource:
+            credentials:
+              auth_type: default
+              userid: root
+              password: "{{ hostvars[item].root_password }}"
+
+    - name: Tag as conversion host
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/{{ host_id }}/tags"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: assign
+          resources:
+            - category: "v2v_transformation_host"
+              name: "true"
+            - category: "v2v_transformation_method"
+              name: "vddk"
+
+    - name: Define as conversion host
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: create
+          resources:
+            - name: "{{ item }}"
+              resource_id: "{{ host_id }}"
+              resource_type: Host
+              vddk_transport_supported: true
+  tags:
+    - miq_config_ovirt_conversion_hosts

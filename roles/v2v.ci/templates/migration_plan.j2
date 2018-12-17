@@ -1,0 +1,14 @@
+---
+name: "{{ v2v_ci_migration_plan_name }}"
+description: "Created by V2V CI"
+prov_type: "generic_transformation_plan"
+config_info:
+  actions:
+
+{% for item in vm_ids %}
+  -
+    post_service: false
+    pre_service: false
+    vm_id: "{{ item | first }}"
+{% endfor %}
+  transformation_mapping_id: "{{ infra_mapping_id }}"
