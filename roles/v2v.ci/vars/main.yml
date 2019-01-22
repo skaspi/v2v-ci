@@ -2,4 +2,9 @@
 # FIX ME: See https://github.com/ManageIQ/manageiq.org/issues/526 (checksums are not published publicly)
 v2v_ci_miq_image_checksum_url: http://file.cloudforms.lab.eng.rdu2.redhat.com/builds/manageiq/master/latest/SHA256SUM
 v2v_ci_miq_image_checksum_file: /tmp/SHA256SUM
+
+# Pre/Post deployment booleans:
+# v2v_ci_miq_vm_force_remove will remove existing MIQ/CFME VM if found
+# v2v_ci_vmw_remove_src_vms will remove existing source VMs from VMware if found
 v2v_ci_miq_vm_force_remove: false
+v2v_ci_remove_src_vms: false

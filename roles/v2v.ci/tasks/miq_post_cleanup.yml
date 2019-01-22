@@ -1,0 +1,24 @@
+---
+- name: Remove RHV/Ovirt target instances if present
+  ovirt_vms:
+    auth:
+      username: "{{ engine_user }}"
+      password: "{{ engine_password }}"
+      hostname: "{{ engine_fqdn }}"
+      insecure: yes
+    state: absent
+    name: "{{ item }}"
+    cluster: "{{ v2v_ci_target_cluster }}"
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+
+- name: Remove VMware source instances if present
+  vmware_guest:
+    hostname: "{{ v2v_ci_vmw_hostname }}"
+    username: "{{ v2v_ci_vmw_user }}"
+    password: "{{ v2v_ci_vmw_password }}"
+    validate_certs: no
+    state: absent
+    name: "{{ item }}"
+    cluster: "{{ v2v_ci_source_cluster }}"
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+  when: v2v_ci_remove_src_vms
