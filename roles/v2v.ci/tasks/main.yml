@@ -49,3 +49,10 @@
 - import_tasks: miq_monitor_transformations.yml
   tags:
     - miq_monitor_transformations
+
+- import_tasks: miq_post_cleanup.yml
+  when: miq_post_cleanup|default(false)|bool == true
+  delegate_to: localhost
+  connection: local
+  tags:
+    - miq_post_cleanup

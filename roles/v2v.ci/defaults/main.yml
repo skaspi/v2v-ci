@@ -1,13 +1,16 @@
 ---
+v2v_ci_vmw_hostname: vcenter.example.com
+v2v_ci_vmw_user: administrator@vsphere.local
+v2v_ci_vmw_password: secret
 v2v_ci_miq_extra_providers:
   - name: V2V VMware
     type: ManageIQ::Providers::Vmware::InfraManager
-    hostname: vcenter.example.com
+    hostname: "{{ v2v_ci_vmw_hostname }}"
     zone:
       href: http://localhost:3000/api/zone/1
     credentials:
-      userid: administrator@vsphere.local
-      password: secret
+      userid: "{{ v2v_ci_vmw_user }}"
+      password: "{{ v2v_ci_vmw_password }}"
 v2v_ci_infra_mapping_name: "V2V_CI"
 v2v_ci_source_cluster: "V2V_vmware_cluster"
 v2v_ci_target_cluster: "V2V_ovirt_cluster"
