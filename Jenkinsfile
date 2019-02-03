@@ -1,9 +1,10 @@
-@Library('rhv-qe-jenkins-library-testing@ansible') _
+@Library('rhv-qe-jenkins-library-khakimi@add_req_ansible') _
 properties(
   [
     parameters(
       [
         string(defaultValue: 'v2v-node', description: 'Name or label of slave to run on.', name: 'NODE_LABEL'),
+        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
         booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
       ]
@@ -17,9 +18,42 @@ pipeline {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
   }
-//  environment {
-//  }
   stages {
+    stage ("Checkout jenkins repository") {
+      steps {
+        checkout(
+          [
+            $class: 'GitSCM',
+            branches: [[name: 'origin/rhevm-4.2']],
+            doGenerateSubmoduleConfigurations: false,
+            extensions: [
+              [$class: 'RelativeTargetDirectory', relativeTargetDir: 'jenkins'],
+              [$class: 'CleanBeforeCheckout'],
+              [$class: 'CloneOption', depth: 0, noTags: false, reference: '', shallow: true],
+              [$class: 'PruneStaleBranch']
+            ],
+            submoduleCfg: [],
+            userRemoteConfigs: [[url: 'git://git.app.eng.bos.redhat.com/rhevm-jenkins.git']]
+          ]
+        )
+        sh '''echo "Executed from: v2v Jenkinsfile"
+
+        if [ -d $WORKSPACE/jenkins ]
+        then
+          pushd $WORKSPACE/jenkins
+          echo $JENKINS_GERRIT_REFSPEC
+          for ref in $JENKINS_GERRIT_REFSPEC ;
+          do
+            git fetch git://git.app.eng.bos.redhat.com/rhevm-jenkins.git "$ref" && git cherry-pick FETCH_HEAD || (
+                echo \'!!! FAIL TO CHERRYPICK !!!\' "$ref" ; false
+            )
+          done
+          popd
+        fi
+        '''
+      }
+    }
+
     stage ("ManageIQ/CloudForms Pre-Check Nightly") {
       when {
         expression { params.MIQ_NIGHTLY_PRE_CHECK }
@@ -27,7 +61,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check_nightly=true'],
           tags: ['miq_pre_check_nightly']
         )
       }
@@ -40,7 +74,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
           tags: ['miq_pre_check']
         )
       }
@@ -53,7 +87,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_pre_check']
         )
       }
@@ -63,7 +97,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_deploy.yml",
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
         )
       }
     }
@@ -72,7 +106,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_add_extra_providers']
         )
       }
@@ -82,7 +116,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_config_ovirt_conversion_hosts']
         )
       }
@@ -92,7 +126,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_config_vmware_esx_hosts']
         )
       }
@@ -103,7 +137,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_config_infra_mappings']
         )
       }
@@ -113,7 +147,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_config_migration_plan']
         )
       }
@@ -123,7 +157,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_order_migration_plan']
         )
       }
@@ -133,7 +167,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_monitor_transformations']
         )
       }

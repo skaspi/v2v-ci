@@ -1,0 +1,7 @@
+---
+# this is old version 1.1.12 try the new version 1.1.13 from github
+#- src: ovirt.manageiq
+#  name: oVirt.manageiq
+- src: https://github.com/oVirt/ovirt-ansible-manageiq.git
+  version: master
+  name: oVirt.manageiq
