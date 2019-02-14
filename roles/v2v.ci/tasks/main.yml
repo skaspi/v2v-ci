@@ -16,11 +16,31 @@
   tags:
     - miq_pre_check_nightly
 
+- import_tasks: miq_create_vms.yml
+  delegate_to: localhost
+  connection: local
+  tags:
+    - miq_create_vms
+
+- import_tasks: miq_install_nmon.yml
+  delegate_to: localhost
+  connection: local
+  tags:
+    - miq_install_nmon
+
 - include_tasks: miq_add_extra_providers.yml
   with_items:
     -  "{{ v2v_ci_miq_extra_providers }}"
   tags:
     - miq_add_extra_providers
+
+- import_tasks: miq_set_provider_concurrent_vm_migration_max.yml
+  tags:
+    - miq_set_provider_concurrent_vm_migration_max
+
+- import_tasks: miq_conversion_hosts_ansible.yml
+  tags:
+    - miq_conversion_hosts_ansible
 
 - include_tasks: miq_config_ovirt_conversion_hosts.yml
   with_items:
@@ -42,6 +62,10 @@
   tags:
     - miq_config_migration_plan
 
+- import_tasks: miq_start_monitoring.yml
+  tags:
+    - miq_start_monitoring
+
 - import_tasks: miq_order_migration_plan.yml
   tags:
     - miq_order_migration_plan
@@ -50,9 +74,7 @@
   tags:
     - miq_monitor_transformations
 
-- import_tasks: miq_post_cleanup.yml
-  when: miq_post_cleanup|default(false)|bool == true
-  delegate_to: localhost
-  connection: local
+- import_tasks: miq_stop_monitoring.yml
   tags:
-    - miq_post_cleanup
+    - miq_stop_monitoring
+      

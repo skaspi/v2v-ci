@@ -1,0 +1,43 @@
+---
+- name: Add Conversion hosts
+  add_host:
+    name: "{{ item }}"
+    ansible_user: root
+    ansible_ssh_pass: "{{ hostvars[item].root_password }}"
+    ansible_pipelining: true
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name: Install latest {{ ovirt_ansible_conversion_host_package }} package
+  yum:
+    name: "{{ ovirt_ansible_conversion_host_package }}"
+    state: latest
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name: Copy {{ extra_vars_file_name }} to the conversion hosts
+  copy: 
+    src: "{{ extra_vars_file_path }}{{ extra_vars_file_name }}"
+    dest: "{{ conversion_host_playbooks_path }}{{ extra_vars_file_name }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name: Run Check Conversion host 
+  shell: ansible-playbook -i {{ item }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_check.yml
+  args:
+    chdir: "{{ conversion_host_playbooks_path }}"
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+  register: command_result
+  ignore_errors: True
+
+- name: Run Conversion host enable on the Conversion host.
+  shell: ansible-playbook -i {{ item.0 }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_enable.yml
+  args:
+    chdir: "{{ conversion_host_playbooks_path }}"
+  delegate_to: "{{ item.0 }}"
+  with_together: 
+    - "{{ groups['ovirt_conversion_hosts'] }}"
+    - "{{ command_result.results }}"
+  when: item.1.rc != 0
+

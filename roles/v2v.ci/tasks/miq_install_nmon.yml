@@ -1,0 +1,52 @@
+---
+
+# Install nmon on CFME and conversion hosts
+- name: check if nmon file already exist
+  stat:
+    path: "{{ nmon_local_dir }}/{{ nmon_tar }}"
+  register: nmon_file_exist
+
+- name: Download and extract nmon into local directory "{{ nmon_local_dir }}"
+  block:
+    - name: Create nmon local directory "{{ nmon_local_dir }}" 
+      file: 
+        state: directory
+        path: "{{ nmon_local_dir }}"
+
+    - name: Download nmon
+      get_url: 
+        url: "{{ nmon_url }}/{{ nmon_tar }}"
+        dest: "{{ nmon_local_dir }}"
+
+    - name: Extract nmon into {{ nmon_local_dir }}
+      unarchive:
+        src: "{{ nmon_local_dir }}/{{ nmon_tar }}"
+        dest: "{{ nmon_local_dir }}"
+  when: nmon_file_exist.stat.exists == false
+
+- name: Copy nmon to CFME machine
+  delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
+  copy:
+    src: "{{ nmon_local_dir }}/{{ nmon_file }}"
+    dest: "{{ nmon_location }}"
+    mode: "0777"
+
+- name: Add Conversion hosts 
+  add_host:
+    name: "{{ item }}"
+    ansible_user: root
+    ansible_ssh_pass: "{{ hostvars[item].root_password }}"
+    ansible_pipelining: true
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name: Copy nmon to conversion hosts
+  delegate_to: "{{ item }}"
+  copy:
+    src: "{{ nmon_local_dir }}/{{ nmon_file }}"
+    dest: "{{ nmon_location }}"
+    mode: "0777"
+
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+

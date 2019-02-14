@@ -102,12 +102,52 @@ pipeline {
       }
     }
 
+    stage ('Create VMs') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_create_vms']
+        )
+      }
+    }
+
+    stage ('Install Nmon') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_install_nmon']
+        )
+      }
+    }
+
     stage ('Add extra providers') {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
           extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_add_extra_providers']
+        )
+      }
+    }
+
+    stage ('Set RHV provider concurrent VM migration max') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_set_provider_concurrent_vm_migration_max']
+        )
+      }
+    }
+
+    stage ('Conversion hosts enable') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_conversion_hosts_ansible']
         )
       }
     }
@@ -153,6 +193,16 @@ pipeline {
       }
     }
 
+    stage ('Start performance monitoring') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_start_monitoring']
+        )
+      }
+    }
+
     stage ('Execute transformation plans') {
       steps {
         ansible(
@@ -169,6 +219,16 @@ pipeline {
           playbook: 'miq_run_step.yml',
           extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_monitor_transformations']
+        )
+      }
+    }
+
+    stage ('Stop performance monitoring') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_stop_monitoring']
         )
       }
     }

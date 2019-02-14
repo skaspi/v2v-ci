@@ -1,0 +1,57 @@
+---
+
+- name: Stop CFME log
+  script: roles/v2v.ci/files/cfme_stop_log.sh "v2v_test"
+
+- name: Find CFME log
+  find:
+    paths: /root/
+    patterns: "*.tar.gz"
+  register: log_file
+
+- name:  Get CFME log
+  fetch:
+    src: "{{ item.path }}"
+    dest: ./
+    flat: yes
+  with_items: "{{ log_file.files }}"
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Add Conversion hosts
+  add_host:
+    name: "{{ item }}"
+    ansible_user: root
+    ansible_ssh_pass: "{{ hostvars[item].root_password }}"
+    ansible_pipelining: true
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name: Stop Conversion hosts log
+  delegate_to: "{{ item }}"
+  script: roles/v2v.ci/files/conv_host_stop_log.sh "v2v_test"
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+
+- name:  Find Conversion hosts log
+  find:
+    paths: /root/
+    patterns: "*.tar.gz"
+  register: log_file
+  delegate_to: "{{ item }}"
+  with_items:
+    -  "{{ groups['ovirt_conversion_hosts'] }}"
+
+- debug:
+    var: log_file
+    verbosity: 2
+
+- name:  Get Conversion hosts log
+  fetch:
+    src: "{{ item[1].files[0].path }}"
+    dest: ./
+    flat: yes
+  with_together:
+    - "{{ groups['ovirt_conversion_hosts'] }}"
+    - "{{ log_file.results }}"
+  delegate_to: "{{ item[0] }}"
+
