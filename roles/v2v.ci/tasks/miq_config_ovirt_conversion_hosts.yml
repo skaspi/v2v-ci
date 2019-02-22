@@ -9,8 +9,8 @@
         validate_certs: no
       register: host_json
       until: host_json.json.subcount == 1
-      retries: 12
-      delay: 5
+      retries: 30
+      delay: 60
 
     - set_fact:
         query: "resources[?name=='{{ item }}'].id"
@@ -35,6 +35,24 @@
               userid: root
               password: "{{ hostvars[item].root_password }}"
 
+    - name: Remove conversion host tags if exist
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/{{ host_id }}/tags"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: unassign
+          resources:
+            - category: "v2v_transformation_host"
+              name: "true"
+            - category: "v2v_transformation_method"
+              name: "vddk"
+            - category: "v2v_transformation_method"
+              name: "ssh"
+
     - name: Tag as conversion host
       uri:
         url: "https://{{ inventory_hostname }}/api/hosts/{{ host_id }}/tags"
@@ -50,21 +68,5 @@
               name: "true"
             - category: "v2v_transformation_method"
               name: "vddk"
-
-    - name: Define as conversion host
-      uri:
-        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
-        user: "{{ miq_app_username | default('admin') }}"
-        password: "{{ miq_app_password | default('smartvm') }}"
-        method: POST
-        validate_certs: no
-        body_format: json
-        body:
-          action: create
-          resources:
-            - name: "{{ item }}"
-              resource_id: "{{ host_id }}"
-              resource_type: Host
-              vddk_transport_supported: true
   tags:
     - miq_config_ovirt_conversion_hosts

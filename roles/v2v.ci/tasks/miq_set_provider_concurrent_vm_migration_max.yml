@@ -1,0 +1,44 @@
+---
+- block:
+  - name: Get RHV provider ID
+    uri:
+      url: "https://{{ inventory_hostname }}/api/providers/?filter[]=name={{ v2v_ci_rhv_name }}&expand=resources"
+      user: "{{ miq_app_username | default('admin') }}"
+      password: "{{ miq_app_password | default('smartvm') }}"
+      method: GET
+      validate_certs: no
+    register: rhv_provider_json
+
+  - set_fact:
+      query: "resources[?name=='{{ v2v_ci_rhv_name }}'].id"
+
+  - name: Extracting RHV provider id from JSON
+    set_fact:
+      rhv_provider_id: "{{ rhv_provider_json.json | json_query(query) | first }}"
+
+  - name: Get custom attribute {{ provider_concurrent_max_name }}
+    uri:
+      url: "https://{{ inventory_hostname }}/api/providers/{{ rhv_provider_id }}/custom_attributes/?filter[]=name={{ provider_concurrent_max_name | regex_replace(' ', '%20') }}"
+      user: "{{ miq_app_username }}"
+      password: "{{ miq_app_password }}"
+      method: GET
+      validate_certs: no
+    register: max_transorm_runners_json
+
+  - name: Add custom attribute {{ provider_concurrent_max_name }}
+    uri:
+      url: "https://{{ inventory_hostname }}/api/providers/{{ rhv_provider_id }}/custom_attributes/"
+      user: "{{ miq_app_username | default('admin') }}"
+      password: "{{ miq_app_password | default('smartvm') }}"
+      method: POST
+      validate_certs: no
+      body_format: json
+      body:
+        action: add
+        resource:
+          name: "{{ provider_concurrent_max_name }}"
+          value: "{{ provider_concurrent_max }}"
+
+  tags:
+    - miq_set_provider_concurrent_vm_migration_max
+

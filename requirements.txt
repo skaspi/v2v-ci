@@ -1,3 +1,3 @@
-ovirt-engine-sdk-python==4.2.9
+ovirt-engine-sdk-python==4.3.0
 PyVmomi
 jmespath

@@ -4,9 +4,20 @@ properties(
     parameters(
       [
         string(defaultValue: 'v2v-node', description: 'Name or label of slave to run on.', name: 'NODE_LABEL'),
-        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
         booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
+        string(defaultValue: '', description: 'The main YAML file', name: 'SOURCE_YAML'),
+        string(defaultValue: '', description: 'Image URL', name: 'CFME_IMAGE_URL'),
+        string(defaultValue: '', description: 'RHV hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'RHV_HOSTS'),
+        string(defaultValue: '', description: 'VMW hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'VMW_HOSTS'),
+        string(defaultValue: '', description: 'The source data store type', name: 'VMW_STORAGE_TYPE', choices: ['ISCSI', 'NFS', 'FC']),
+        string(defaultValue: '', description: 'The target data store type', name: 'RHV_STORAGE_TYPE', choices: ['ISCSI', 'NFS', 'FC']),
+        string(defaultValue: '', description: 'The number of hosts to be migrated', name: 'NUMBER_OF_VMS'),
+        string(defaultValue: 'regression_v2v_76_100_oct_2018', description: 'VMware Template name', name: 'VMW_TEMPLATE_NAME'),
+        choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
+        string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
+        string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
+        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
     ),
   ]
@@ -24,7 +35,7 @@ pipeline {
         checkout(
           [
             $class: 'GitSCM',
-            branches: [[name: 'origin/rhevm-4.2']],
+            branches: [[name: 'origin/master']],
             doGenerateSubmoduleConfigurations: false,
             extensions: [
               [$class: 'RelativeTargetDirectory', relativeTargetDir: 'jenkins'],
@@ -53,6 +64,37 @@ pipeline {
         '''
       }
     }
+
+    stage ("Generating inventory and extra_vars") {
+      steps {
+        sh '''
+            DEST="${WORKSPACE}/jenkins"
+            pushd "${DEST}"
+            chmod +x ${DEST}/tools/v2v/v2v_env.py
+            virtualenv yaml_generator
+            source yaml_generator/bin/activate
+            export PYTHONWARNINGS="ignore"
+            pip install --upgrade pip
+            python -m pip install pyyaml jinja2 pathlib
+            ${DEST}/tools/v2v/v2v_env.py $SOURCE_YAML \
+                                         --inventory ${DEST}/qe/v2v/inventory.yml \
+                                         --extra_vars ${DEST}/qe/v2v/extra_vars.yml \
+                                         --trans_method $TRANSPORT_METHODS \
+                                         --image_url $CFME_IMAGE_URL \
+                                         --rhv_hosts "$RHV_HOSTS" \
+                                         --vmw_hosts "$VMW_HOSTS" \
+                                         --number_of_vms $NUMBER_OF_VMS \
+                                         --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
+                                         --host_concurrent_max $HOST_CONCURRENT_MAX \
+                                         --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
+                                         --v2v_ci_source_datastore $VMW_STORAGE_TYPE \
+                                         --v2v_ci_target_datastore $RHV_STORAGE_TYPE \
+            deactivate
+            rm -r yaml_generator
+            popd'''
+      }
+    }
+
 
     stage ("ManageIQ/CloudForms Pre-Check Nightly") {
       when {
@@ -94,10 +136,33 @@ pipeline {
     }
 
     stage ("Deploy ManageIQ/CloudForms") {
+      when {
+        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      }
       steps {
         ansible(
           playbook: "miq_deploy.yml",
           extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+        )
+      }
+    }
+
+    stage ('Create VMs') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_create_vms']
+        )
+      }
+    }
+
+    stage ('Install Nmon') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_install_nmon']
         )
       }
     }
@@ -108,6 +173,26 @@ pipeline {
           playbook: 'miq_run_step.yml',
           extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_add_extra_providers']
+        )
+      }
+    }
+
+    stage ('Set RHV provider concurrent VM migration max') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_set_provider_concurrent_vm_migration_max']
+        )
+      }
+    }
+
+    stage ('Conversion hosts enable') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_conversion_hosts_ansible']
         )
       }
     }
@@ -153,6 +238,16 @@ pipeline {
       }
     }
 
+    stage ('Start performance monitoring') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_start_monitoring']
+        )
+      }
+    }
+
     stage ('Execute transformation plans') {
       steps {
         ansible(
@@ -169,6 +264,16 @@ pipeline {
           playbook: 'miq_run_step.yml',
           extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
           tags: ['miq_monitor_transformations']
+        )
+      }
+    }
+
+    stage ('Stop performance monitoring') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_stop_monitoring']
         )
       }
     }

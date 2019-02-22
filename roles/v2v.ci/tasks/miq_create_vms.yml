@@ -1,0 +1,54 @@
+---
+
+# Remove & Create VMs 
+- name: Remove RHV/Ovirt target instances if present
+  ovirt_vms:
+    auth:
+      username: "{{ v2v_ci_rhv_user }}"
+      password: "{{ v2v_ci_rhv_password }}"
+      hostname: "{{ v2v_ci_rhv_hostname }}"
+      insecure: yes
+    state: absent
+    name: "{{ item }}"
+    cluster: "{{ v2v_ci_target_cluster }}"
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+
+- name: Remove VMware source instances if present
+  vmware_guest:
+    hostname: "{{ v2v_ci_vmw_hostname }}"
+    username: "{{ v2v_ci_vmw_user }}"
+    password: "{{ v2v_ci_vmw_password }}"
+    validate_certs: no
+    state: absent
+    name: "{{ item }}"
+    cluster: "{{ v2v_ci_source_cluster }}"
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+
+- name:  Clone a virtual machine from Linux template
+  vmware_guest:
+    hostname: "{{ v2v_ci_vmw_hostname }}"
+    username: "{{ v2v_ci_vmw_user }}"
+    password: "{{ v2v_ci_vmw_password }}"
+    validate_certs: no
+    datacenter: "{{ v2v_ci_vmw_datacenter }}"
+    state: poweredoff
+    folder: "{{ v2v_ci_vmw_folder }}"
+    template: "{{ v2v_ci_vmw_template }}" 
+    name: "{{ item }}"
+    datastore: "{{ v2v_ci_source_datastore }}"
+    esxi_hostname: "{{ groups['vmware_esx_hosts'][0] }}"
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+  async: 7200
+  poll: 0
+  register: new_vms
+
+- debug:
+    var: new_vms
+
+- name: wait for vms
+  async_status: jid={{ item.ansible_job_id }}
+  register: jobs
+  until: jobs.finished
+  retries: 300
+  with_items: "{{ new_vms.results }}"
+

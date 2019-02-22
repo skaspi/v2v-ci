@@ -33,7 +33,7 @@
         - href: "{{ plan_request_href }}"
   register: plan_status_json
   until: plan_status_json.json.results[0].request_state == 'finished'
-  retries: 60
+  retries: 90
   delay: 60
 
 - name: Check transformation plan {{ v2v_ci_migration_plan_name }} results
