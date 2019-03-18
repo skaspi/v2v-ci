@@ -2,7 +2,7 @@
 
 # Remove & Create VMs 
 - name: Remove RHV/Ovirt target instances if present
-  ovirt_vms:
+  ovirt_vm:
     auth:
       username: "{{ v2v_ci_rhv_user }}"
       password: "{{ v2v_ci_rhv_password }}"
