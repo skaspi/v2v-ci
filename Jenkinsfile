@@ -7,6 +7,8 @@ properties(
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
         booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
+        choice(defaultValue: false, description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
+        string(defaultValue: '', description: 'Image URL', name: 'CFME_IMAGE_URL'),
       ]
     ),
   ]
@@ -51,6 +53,26 @@ pipeline {
           popd
         fi
         '''
+      }
+    }
+
+    stage ("Generating inventory and extra_vars") {
+      steps {
+        sh '''DEST="${WORKSPACE}/jenkins"
+            pushd "${DEST}"
+            chmod +x ${DEST}/tools/v2v_env.py
+            virtualenv yaml_generator && cd yaml_generator
+            source bin/activate
+            export PYTHONWARNINGS="ignore"
+            pip install --upgrade pip
+            python -m pip install pyyaml jinja2
+            ${DEST}/tools/v2v_env.py ${DEST}/qe/v2v/v2v-1.yml \
+                                            --inventory ${DEST}/qe/v2v/inventory \
+                                            --extra_vars ${DEST}/qe/v2v/extra \
+                                            --trans_method $TRANSPORT_METHODS \
+                                            --image_url $CFME_IMAGE_URL
+            deactivate
+            popd'''
       }
     }
 
