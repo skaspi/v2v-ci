@@ -7,6 +7,17 @@ properties(
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
         booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
+        choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
+        string(defaultValue: '', description: 'Image URL', name: 'CFME_IMAGE_URL'),
+        string(defaultValue: '', description: 'The main YAML file', name: 'SOURCE_YAML'),
+        string(defaultValue: '', description: 'RHV hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'RHV_HOSTS'),
+        string(defaultValue: '', description: 'VMW hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'VMW_HOSTS'),
+        string(defaultValue: 'NFS', description: 'The source data store type', name: 'VMW_STORAGE_TYPE', choices: ['NFS', 'ISCI', 'FC']),
+        string(defaultValue: 'NFS', description: 'The target data store type', name: 'RHV_STORAGE_TYPE', choices: ['NFS', 'ISCI', 'FC']),
+        string(defaultValue: 'regression_v2v_76_100_oct_2018', description: 'VMware Template name', name: 'VMW_TEMPLATE_NAME'),
+        string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
+        string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
+        string(defaultValue: '', description: 'The number of hosts to be migrated', name: 'VMS_TO_MIGRATE')
       ]
     ),
   ]
@@ -51,6 +62,45 @@ pipeline {
           popd
         fi
         '''
+      }
+    }
+
+    stage ("Generating inventory and extra_vars") {
+      steps {
+        sh '''
+            if ["$RHV_HOSTS" = ""]; then
+              RHV_HOSTS="all"
+            fi
+            if ["$VMW_HOSTS" = ""]; then
+              VMW_HOSTS="all"
+            fi
+
+            DEST="${WORKSPACE}/jenkins"
+            pushd "${DEST}"
+            chmod +x ${DEST}/tools/v2v_env.py
+            virtualenv yaml_generator && cd yaml_generator
+            source bin/activate
+            export PYTHONWARNINGS="ignore"
+            pip install --upgrade pip
+            python -m pip install pyyaml jinja2 pathlib
+            RHV_HOSTS=`echo "$RHV_HOSTS" | awk '$1=$1'`   # removing extra spaces with awk
+            VMW_HOSTS=`echo "$VMW_HOSTS" | awk '$1=$1'`
+            ${DEST}/tools/v2v_env.py $SOURCE_YAML \
+                                     --inventory ${DEST}/qe/v2v/inventory.yml \
+                                     --extra_vars ${DEST}/qe/v2v/extra_vars.yml \
+                                     --trans_method $TRANSPORT_METHODS \
+                                     --image_url $CFME_IMAGE_URL \
+                                     --rhv_hosts $RHV_HOSTS \
+                                     --vmw_hosts $VMW_HOSTS \
+                                     --vms_to_migrate $VMS_TO_MIGRATE \
+                                     --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
+                                     --max_concurrent_conversions $HOST_CONCURRENT_MAX \
+                                     --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
+                                     --v2v_ci_source_datastore $VMW_STORAGE_TYPE \
+                                     --v2v_ci_target_datastore $RHV_STORAGE_TYPE \
+
+            deactivate
+            popd'''
       }
     }
 
