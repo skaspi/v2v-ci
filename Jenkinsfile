@@ -68,7 +68,7 @@ pipeline {
             python -m pip install pyyaml jinja2
             ${DEST}/tools/v2v_env.py ${DEST}/qe/v2v/v2v-1.yml \
                                             --inventory ${DEST}/qe/v2v/inventory \
-                                            --extra_vars ${DEST}/qe/v2v/extra \
+                                            --extra_vars ${DEST}/qe/v2v/extra_vars.yml \
                                             --trans_method $TRANSPORT_METHODS \
                                             --image_url $CFME_IMAGE_URL
             deactivate
