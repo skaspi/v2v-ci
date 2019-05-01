@@ -1,167 +1,176 @@
-#!groovy
+@Library('rhv-qe-jenkins-library-khakimi@add_req_ansible') _
+properties(
+  [
+    parameters(
+      [
+        string(defaultValue: 'v2v-node', description: 'Name or label of slave to run on.', name: 'NODE_LABEL'),
+        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
+        booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
+        booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
+      ]
+    ),
+  ]
+)
 
-// true/false build parameter to define if we need to run MIQ nightly pre-checks
-def MIQ_NIGHTLY_PRE_CHECK = params.MIQ_NIGHTLY_PRE_CHECK
-// Override default image QCOW url set on ansible
-def MIQ_QCOW_URL = params.MIQ_QCOW_URL
-// true/false build parameter to remove existing instance of MIQ if present/running
-def MIQ_REMOVE_EXISTING_INSTANCE = params.MIQ_REMOVE_EXISTING_INSTANCE
-
-echo "Running job ${env.JOB_NAME}, build ${env.BUILD_ID} on ${env.JENKINS_URL}"
-echo "Build URL ${env.BUILD_URL}"
-echo "Job URL ${env.JOB_URL}"
-
-stage('ManageIQ/CloudForms Pre-Check') {
+pipeline {
+  agent {
     node {
-        
-        if (MIQ_NIGHTLY_PRE_CHECK) {
-            ansiColor('xterm') {
-                ansiblePlaybook(
-                    playbook: 'miq_run_step.yml',
-                    tags: 'miq_pre_check_nightly',
-                    extras: '-e "@extra_vars.yml" -e "miq_pre_check_nightly=true"',
-                    hostKeyChecking: false,
-                    unbuffered: true,
-                    colorized: true)
-            }
-        }
-        if (MIQ_QCOW_URL) {
-            ansiColor('xterm') {
-                echo "Override QCOW URL ON ansible playbook call"
-            }
-        }
-        
-        if (MIQ_REMOVE_EXISTING_INSTANCE) {
-            ansiColor('xterm') {
-                ansiblePlaybook(
-                    playbook: 'miq_run_step.yml',
-                    tags: 'miq_pre_check',
-                    extras: '-e "@extra_vars.yml" -e "miq_pre_check=true" -e "v2v_ci_miq_vm_force_remove=true"',
-                    hostKeyChecking: false,
-                    unbuffered: true,
-                    colorized: true)
-            }
-        }
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_pre_check',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+      label params.NODE_LABEL ? params.NODE_LABEL : null
     }
-}
+  }
+  stages {
+    stage ("Checkout jenkins repository") {
+      steps {
+        checkout(
+          [
+            $class: 'GitSCM',
+            branches: [[name: 'origin/rhevm-4.2']],
+            doGenerateSubmoduleConfigurations: false,
+            extensions: [
+              [$class: 'RelativeTargetDirectory', relativeTargetDir: 'jenkins'],
+              [$class: 'CleanBeforeCheckout'],
+              [$class: 'CloneOption', depth: 0, noTags: false, reference: '', shallow: true],
+              [$class: 'PruneStaleBranch']
+            ],
+            submoduleCfg: [],
+            userRemoteConfigs: [[url: 'git://git.app.eng.bos.redhat.com/rhevm-jenkins.git']]
+          ]
+        )
+        sh '''echo "Executed from: v2v Jenkinsfile"
 
-stage('Deploy ManageIQ/CloudForms') {
-    node {
-       ansiColor('xterm') {
-           ansiblePlaybook(
-                playbook: 'miq_deploy.yml',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+        if [ -d $WORKSPACE/jenkins ]
+        then
+          pushd $WORKSPACE/jenkins
+          echo $JENKINS_GERRIT_REFSPEC
+          for ref in $JENKINS_GERRIT_REFSPEC ;
+          do
+            git fetch git://git.app.eng.bos.redhat.com/rhevm-jenkins.git "$ref" && git cherry-pick FETCH_HEAD || (
+                echo \'!!! FAIL TO CHERRYPICK !!!\' "$ref" ; false
+            )
+          done
+          popd
+        fi
+        '''
+      }
     }
-}
 
-stage('Add extra providers') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_add_extra_providers',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ("ManageIQ/CloudForms Pre-Check Nightly") {
+      when {
+        expression { params.MIQ_NIGHTLY_PRE_CHECK }
+      }
+      steps {
+        ansible(
+          playbook: "miq_run_step.yml",
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check_nightly=true'],
+          tags: ['miq_pre_check_nightly']
+        )
+      }
     }
-}
 
-stage('Configure oVirt conversion hosts') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_config_ovirt_conversion_hosts',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ("ManageIQ/CloudForms Remove existing instance") {
+      when {
+        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      }
+      steps {
+        ansible(
+          playbook: "miq_run_step.yml",
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
+          tags: ['miq_pre_check']
+        )
+      }
     }
-}
 
-stage('Configure ESX hosts') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_config_vmware_esx_hosts',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ("ManageIQ/CloudForms Remove Pre-Check") {
+      when {
+        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      }
+      steps {
+        ansible(
+          playbook: "miq_run_step.yml",
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_pre_check']
+        )
+      }
     }
-}
 
-
-stage('Create transformation mappings') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_config_infra_mappings',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ("Deploy ManageIQ/CloudForms") {
+      steps {
+        ansible(
+          playbook: "miq_deploy.yml",
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+        )
+      }
     }
-}
 
-stage('Create transformation plans') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_config_migration_plan',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ('Add extra providers') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_add_extra_providers']
+        )
+      }
     }
-}
 
-stage('Execute transformation plans') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_order_migration_plan',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ('Configure oVirt conversion hosts') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_config_ovirt_conversion_hosts']
+        )
+      }
     }
-}
 
-stage('Monitor transformation plans') {
-    node {
-        ansiColor('xterm') {
-            ansiblePlaybook(
-                playbook: 'miq_run_step.yml',
-                tags: 'miq_monitor_transformations',
-                extras: '-e "@extra_vars.yml"',
-                hostKeyChecking: false,
-                unbuffered: true,
-                colorized: true)
-        }
+    stage ('Configure ESX hosts') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_config_vmware_esx_hosts']
+        )
+      }
     }
+
+
+    stage ('Create transformation mappings') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_config_infra_mappings']
+        )
+      }
+    }
+
+    stage ('Create transformation plans') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_config_migration_plan']
+        )
+      }
+    }
+
+    stage ('Execute transformation plans') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_order_migration_plan']
+        )
+      }
+    }
+
+    stage ('Monitor transformation plans') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          tags: ['miq_monitor_transformations']
+        )
+      }
+    }
+  }
 }
