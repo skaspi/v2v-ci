@@ -54,3 +54,4 @@
     - "{{ groups['ovirt_conversion_hosts'] }}"
     - "{{ log_file.results }}"
   delegate_to: "{{ item[0] }}"
+
