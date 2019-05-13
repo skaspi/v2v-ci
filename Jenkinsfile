@@ -68,33 +68,29 @@ pipeline {
     stage ("Generating inventory and extra_vars") {
       steps {
         sh '''
-            DEST="${WORKSPACE}/jenkins"
-            pushd "${DEST}"
-            chmod +x ${DEST}/tools/v2v/v2v_env.py
+            rm -rf yaml_generator
             virtualenv yaml_generator
             source yaml_generator/bin/activate
-            export PYTHONWARNINGS="ignore"
             pip install --upgrade pip
-            python -m pip install pyyaml jinja2 pathlib
-            ${DEST}/tools/v2v/v2v_env.py $SOURCE_YAML \
-                                         --inventory ${DEST}/qe/v2v/inventory.yml \
-                                         --extra_vars ${DEST}/qe/v2v/extra_vars.yml \
-                                         --trans_method $TRANSPORT_METHODS \
-                                         --image_url $CFME_IMAGE_URL \
-                                         --rhv_hosts "$RHV_HOSTS" \
-                                         --vmw_hosts "$VMW_HOSTS" \
-                                         --number_of_vms $NUMBER_OF_VMS \
-                                         --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
-                                         --host_concurrent_max $HOST_CONCURRENT_MAX \
-                                         --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
-                                         --v2v_ci_source_datastore $VMW_STORAGE_TYPE \
-                                         --v2v_ci_target_datastore $RHV_STORAGE_TYPE \
+            pip install pyyaml jinja2 pathlib
+            ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
+                                                      --inventory  ${WORKSPACE}/inventory.yml \
+                                                      --extra_vars ${WORKSPACE}/extra_vars.yml \
+                                                      --trans_method $TRANSPORT_METHODS \
+                                                      --image_url $CFME_IMAGE_URL \
+                                                      --rhv_hosts "$RHV_HOSTS" \
+                                                      --vmw_hosts "$VMW_HOSTS" \
+                                                      --number_of_vms $NUMBER_OF_VMS \
+                                                      --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
+                                                      --host_concurrent_max $HOST_CONCURRENT_MAX \
+                                                      --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
+                                                      --v2v_ci_source_datastore $VMW_STORAGE_TYPE \
+                                                      --v2v_ci_target_datastore $RHV_STORAGE_TYPE \
+
             deactivate
-            rm -r yaml_generator
-            popd'''
+            '''
       }
     }
-
 
     stage ("ManageIQ/CloudForms Pre-Check Nightly") {
       when {
@@ -103,7 +99,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check_nightly=true'],
+          extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
           tags: ['miq_pre_check_nightly']
         )
       }
@@ -116,7 +112,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
+          extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
           tags: ['miq_pre_check']
         )
       }
@@ -129,7 +125,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_run_step.yml",
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_pre_check']
         )
       }
@@ -142,7 +138,7 @@ pipeline {
       steps {
         ansible(
           playbook: "miq_deploy.yml",
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
         )
       }
     }
@@ -151,7 +147,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_create_vms']
         )
       }
@@ -161,7 +157,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_install_nmon']
         )
       }
@@ -171,7 +167,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_add_extra_providers']
         )
       }
@@ -181,7 +177,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_set_provider_concurrent_vm_migration_max']
         )
       }
@@ -191,7 +187,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_conversion_hosts_ansible']
         )
       }
@@ -201,7 +197,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_config_ovirt_conversion_hosts']
         )
       }
@@ -211,7 +207,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_config_vmware_esx_hosts']
         )
       }
@@ -222,7 +218,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_config_infra_mappings']
         )
       }
@@ -232,7 +228,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_config_migration_plan']
         )
       }
@@ -242,7 +238,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_start_monitoring']
         )
       }
@@ -252,7 +248,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_order_migration_plan']
         )
       }
@@ -262,7 +258,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_monitor_transformations']
         )
       }
@@ -272,7 +268,7 @@ pipeline {
       steps {
         ansible(
           playbook: 'miq_run_step.yml',
-          extraVars: ['@jenkins/qe/v2v/extra_vars.yml'],
+          extraVars: ['@extra_vars.yml'],
           tags: ['miq_stop_monitoring']
         )
       }
