@@ -1,6 +1,6 @@
 ---
 - name: Remove existing ManageIQ/CloudForms instance if present
-  ovirt_vms:
+  ovirt_vm:
     auth:
       username: "{{ engine_user }}"
       password: "{{ engine_password }}"

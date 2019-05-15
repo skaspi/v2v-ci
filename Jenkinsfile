@@ -74,7 +74,7 @@ pipeline {
             pip install --upgrade pip
             pip install pyyaml jinja2 pathlib
             ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
-                                                      --inventory  ${WORKSPACE}/inventory.yml \
+                                                      --inventory  ${WORKSPACE}/jenkins/qe/v2v/inventory \
                                                       --extra_vars ${WORKSPACE}/extra_vars.yml \
                                                       --trans_method $TRANSPORT_METHODS \
                                                       --image_url $CFME_IMAGE_URL \
