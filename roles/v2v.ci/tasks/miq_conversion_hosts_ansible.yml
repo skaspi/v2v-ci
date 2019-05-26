@@ -22,22 +22,18 @@
   delegate_to: "{{ item }}"
   with_items: "{{ groups['ovirt_conversion_hosts'] }}"
 
-- name: Run Check Conversion host 
-  shell: ansible-playbook -i {{ item }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_check.yml
+- name: Conversion host disable 
+  shell: ansible-playbook -i {{ item }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_disable.yml
   args:
     chdir: "{{ conversion_host_playbooks_path }}"
   delegate_to: "{{ item }}"
   with_items: "{{ groups['ovirt_conversion_hosts'] }}"
-  register: command_result
   ignore_errors: True
 
-- name: Run Conversion host enable on the Conversion host.
+- name: Conversion host enable
   shell: ansible-playbook -i {{ item.0 }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_enable.yml
   args:
     chdir: "{{ conversion_host_playbooks_path }}"
-  delegate_to: "{{ item.0 }}"
-  with_together: 
-    - "{{ groups['ovirt_conversion_hosts'] }}"
-    - "{{ command_result.results }}"
-  when: item.1.rc != 0
-
+  delegate_to: "{{ item }}"
+  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+  ignore_errors: True

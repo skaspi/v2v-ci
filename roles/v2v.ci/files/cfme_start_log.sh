@@ -15,10 +15,9 @@ fi
 
 echo "[Initializing] Creating a temporary folder to store logs..."
 rm -rf $case_dir
-mkdir $case_dir
+mkdir -p $case_dir/nmon
 
 echo "[Running] Running nmon..."
-mkdir $case_dir/nmon
 nmon -f -s 5 -T -c 83000 -m $case_dir/nmon &
 
 sleep 1s

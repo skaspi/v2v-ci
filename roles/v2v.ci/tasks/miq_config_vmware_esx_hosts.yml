@@ -2,7 +2,7 @@
 - block:
     - name: Collect the list of host authentications
       uri:
-        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ item }}&expand=resources&attributes=authentications"
+        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ hostvars[item].vmw_host_name }}&expand=resources&attributes=authentications"
         user: "{{ miq_app_username | default('admin') }}"
         password: "{{ miq_app_password | default('smartvm') }}"
         method: GET
@@ -13,7 +13,7 @@
       delay: 5
 
     - set_fact:
-        query: "resources[?name=='{{ item }}'].id"
+        query: "resources[?name=='{{ hostvars[item].vmw_host_name }}'].id"
 
     - name: Extracting host id from JSON
       set_fact:
