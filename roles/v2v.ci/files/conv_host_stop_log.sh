@@ -45,16 +45,6 @@ done
 echo "Saving vddk plugin dump output..."
 echo `LD_LIBRARY_PATH="/opt/vmware-vix-disklib-distrib/lib64" nbdkit --dump-plugin vddk` > $package_versions_dir/vddk_plugin.log
 
-#echo "Calculating iostat read and write rates..."
-#for filename in "${case_dir}/iostat/*.log"; do
-#    echo "****running on file $filename****"
-#    dm_path="${filename%.*}"
-#    echo "******executing command: grep $dm_path $filename | tr -s ' ' | cut -d " " -f6 | awk '{if ($1 > 20) {sum+=$1; z++}} END { print sum/z }****"
-#    read_rate=`grep $dm_path $filename | tr -s ' ' | cut -d " " -f6 | awk '{if ($1 > 20) {sum+=$1; z++}} END { print sum/z }'`
-#    write_rate=`grep $dm_path $filename | tr -s ' ' | cut -d " " -f7| awk '{if ($1 > 20) {sum+=$1; z++}} END { print sum/z }'`
-#    echo "Average Read: $read_rate Average Write: $write_rate" > $case_dir/files/iostat_stats.log
-#done
-
 file=$(date '+%Y-%m-%d_%H-%M-%S')_$(hostname -s)_$test_name-conv_host.tar.gz
 echo "Compressing logs into $file..."
 cd $case_dir && tar cvzf /root/$file * && cd ~

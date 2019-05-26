@@ -10,8 +10,8 @@ properties(
         string(defaultValue: '', description: 'Image URL', name: 'CFME_IMAGE_URL'),
         string(defaultValue: '', description: 'RHV hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'RHV_HOSTS'),
         string(defaultValue: '', description: 'VMW hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'VMW_HOSTS'),
-        string(defaultValue: '', description: 'The source data store type', name: 'VMW_STORAGE_TYPE', choices: ['ISCSI', 'NFS', 'FC']),
-        string(defaultValue: '', description: 'The target data store type', name: 'RHV_STORAGE_TYPE', choices: ['ISCSI', 'NFS', 'FC']),
+        string(defaultValue: '', description: 'The source data store type', name: 'VMW_STORAGE_TYPE'),
+        string(defaultValue: '', description: 'The target data store type', name: 'RHV_STORAGE_TYPE'),
         string(defaultValue: '', description: 'The number of hosts to be migrated', name: 'NUMBER_OF_VMS'),
         string(defaultValue: 'regression_v2v_76_100_oct_2018', description: 'VMware Template name', name: 'VMW_TEMPLATE_NAME'),
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
@@ -24,7 +24,7 @@ properties(
 )
 
 pipeline {
-  agent {
+  agent {``
     node {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
@@ -84,8 +84,8 @@ pipeline {
                                                       --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
                                                       --host_concurrent_max $HOST_CONCURRENT_MAX \
                                                       --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
-                                                      --v2v_ci_source_datastore $VMW_STORAGE_TYPE \
-                                                      --v2v_ci_target_datastore $RHV_STORAGE_TYPE \
+                                                      --v2v_ci_source_datastore "$VMW_STORAGE_TYPE" \
+                                                      --v2v_ci_target_datastore "$RHV_STORAGE_TYPE" \
 
             deactivate
             '''
