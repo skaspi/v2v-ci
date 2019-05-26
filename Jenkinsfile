@@ -68,7 +68,6 @@ pipeline {
     stage ("Generating inventory and extra_vars") {
       steps {
         sh '''
-            echo "$env.JOB_BASE_NAME"
             rm -rf yaml_generator
             virtualenv yaml_generator
             source yaml_generator/bin/activate
@@ -87,6 +86,7 @@ pipeline {
                                                       --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
                                                       --v2v_ci_source_datastore "$VMW_STORAGE_TYPE" \
                                                       --v2v_ci_target_datastore "$RHV_STORAGE_TYPE" \
+                                                      --job_basename_url $JOB_BASE_NAME
 
             deactivate
             '''
