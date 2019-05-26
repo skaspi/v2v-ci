@@ -24,7 +24,7 @@ properties(
 )
 
 pipeline {
-  agent {``
+  agent {
     node {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
