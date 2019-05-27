@@ -144,15 +144,15 @@ pipeline {
       }
     }
 
-    stage ('Create VMs') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_create_vms']
-        )
-      }
-    }
+    #stage ('Create VMs') {
+     # steps {
+      #  ansible(
+       #   playbook: 'miq_run_step.yml',
+       #   extraVars: ['@extra_vars.yml'],
+        #  tags: ['miq_create_vms']
+        #)
+     # }
+    #}
 
     stage ('Install Nmon') {
       steps {
