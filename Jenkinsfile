@@ -17,7 +17,8 @@ properties(
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
+        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
+        string(defaultValue: '', description: 'RHV GE environment', name: 'GE')
       ]
     ),
   ]
@@ -86,7 +87,8 @@ pipeline {
                                                       --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
                                                       --v2v_ci_source_datastore "$VMW_STORAGE_TYPE" \
                                                       --v2v_ci_target_datastore "$RHV_STORAGE_TYPE" \
-                                                      --job_basename_url $JOB_BASE_NAME
+                                                      --job_basename_url $JOB_BASE_NAME \
+                                                      --rhv_ge $GE
 
             deactivate
             '''
@@ -140,6 +142,16 @@ pipeline {
         ansible(
           playbook: "miq_deploy.yml",
           extraVars: ['@extra_vars.yml'],
+        )
+      }
+    }
+
+    stage ('Create VMs') {
+      steps {
+        ansible(
+          playbook: 'miq_run_step.yml',
+          extraVars: ['@extra_vars.yml'],
+          tags: ['miq_create_vms']
         )
       }
     }
