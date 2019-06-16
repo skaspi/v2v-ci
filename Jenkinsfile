@@ -73,7 +73,7 @@ pipeline {
             virtualenv yaml_generator
             source yaml_generator/bin/activate
             pip install --upgrade pip
-            pip install pyyaml jinja2 pathlib coloredlogs
+            pip install pyyaml jinja2 pathlib
             ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
                                                       --inventory  ${WORKSPACE}/jenkins/qe/v2v/inventory \
                                                       --extra_vars ${WORKSPACE}/extra_vars.yml \
