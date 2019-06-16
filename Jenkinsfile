@@ -6,6 +6,7 @@ properties(
         string(defaultValue: 'v2v-node', description: 'Name or label of slave to run on.', name: 'NODE_LABEL'),
         booleanParam(defaultValue: false, description: 'Nightly pre check', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
+        string(defaultValue: '', description: 'RHV GE environment', name: 'RHV'),
         string(defaultValue: '', description: 'The main YAML file', name: 'SOURCE_YAML'),
         string(defaultValue: '', description: 'Image URL', name: 'CFME_IMAGE_URL'),
         string(defaultValue: '', description: 'RHV hosts selection, i.e. 1,2,3; 1-2,3; 1-3', name: 'RHV_HOSTS'),
@@ -17,8 +18,7 @@ properties(
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC'),
-        string(defaultValue: '', description: 'RHV GE environment', name: 'RHV')
+        string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
     ),
   ]
@@ -73,7 +73,7 @@ pipeline {
             virtualenv yaml_generator
             source yaml_generator/bin/activate
             pip install --upgrade pip
-            pip install pyyaml jinja2 pathlib
+            pip install pyyaml jinja2 pathlib coloredlogs
             ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
                                                       --inventory  ${WORKSPACE}/jenkins/qe/v2v/inventory \
                                                       --extra_vars ${WORKSPACE}/extra_vars.yml \
