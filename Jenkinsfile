@@ -1,5 +1,6 @@
 @Library('rhv-qe-jenkins-library-khakimi@add_req_ansible') _
 @Library('rhv-qe-jenkins-library') _
+
 properties(
   [
     parameters(
@@ -32,6 +33,7 @@ pipeline {
     }
   }
   stages {
+    lock(resource: $GE) {
     stage ("Checkout jenkins repository") {
       steps {
         checkout(
@@ -277,5 +279,6 @@ pipeline {
         )
       }
     }
+   }
   }
 }
