@@ -28,7 +28,7 @@
 
   - name: Collect target VM ids
     uri:
-      url: "https://{{ inventory_hostname }}/api/vms/?filter[]=name={{ item | regex_replace (' ', '%20') }}&expand=resources&attributes=name"
+      url: "https://{{ inventory_hostname }}/api/vms/?filter[]=name={{ item | regex_replace (' ', '%20') }}&expand=resources&attributes=name&filter[]=vendor=vmware&filter[]=ems_id!=null"
       user: "{{ miq_app_username | default('admin') }}"
       password: "{{ miq_app_password | default('smartvm') }}"
       method: GET

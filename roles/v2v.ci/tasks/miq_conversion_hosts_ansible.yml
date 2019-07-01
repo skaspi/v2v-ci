@@ -1,39 +1,57 @@
 ---
-- name: Add Conversion hosts
-  add_host:
-    name: "{{ item }}"
-    ansible_user: root
-    ansible_ssh_pass: "{{ hostvars[item].root_password }}"
-    ansible_pipelining: true
-  with_items:
-    -  "{{ groups['ovirt_conversion_hosts'] }}"
+- block:
+    - name: Find host JSON
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources&attributes=authentications"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: host_json
+      until: host_json.json.subcount == 1
+      retries: 30
+      delay: 60
 
-- name: Install latest {{ ovirt_ansible_conversion_host_package }} package
-  yum:
-    name: "{{ ovirt_ansible_conversion_host_package }}"
-    state: latest
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+    - set_fact:
+        query: "resources[?name=='{{ hostvars[item].rhv_host_name }}'].id"
 
-- name: Copy {{ extra_vars_file_name }} to the conversion hosts
-  copy: 
-    src: "{{ extra_vars_file_path }}{{ extra_vars_file_name }}"
-    dest: "{{ conversion_host_playbooks_path }}{{ extra_vars_file_name }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+    - name: Extracting host id from JSON
+      set_fact:
+        host_id: "{{ host_json.json | json_query(query) | first }}"
 
-- name: Conversion host disable 
-  shell: ansible-playbook -i {{ item }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_disable.yml
-  args:
-    chdir: "{{ conversion_host_playbooks_path }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
-  ignore_errors: True
+    - name: Add RHV host to inventory
+      add_host:
+        name: "{{ v2v_ci_rhv_hostname }}"
+        ansible_user: "root"
+        ansible_ssh_pass: "qum5net"
+        ansible_pipelining: true
 
-- name: Conversion host enable
-  shell: ansible-playbook -i {{ item.0 }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_enable.yml
-  args:
-    chdir: "{{ conversion_host_playbooks_path }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
-  ignore_errors: True
+    - name: Read RHV SSH Private key
+      delegate_to: "{{ v2v_ci_rhv_hostname }}"
+      shell: tail -n +4 /etc/pki/ovirt-engine/keys/engine_id_rsa
+      register: ssh_key
+
+    - debug: msg="{{ssh_key.stdout}}"
+
+    - name: Enable conversion host
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: create
+          resources:
+            - name: "{{ hostvars[item].rhv_host_name }}"
+              resource_type: "ManageIQ::Providers::Redhat::InfraManager::Host"
+              resource_id: "{{ host_id }}"
+              max_concurrent_tasks: "{{ v2v_max_concurrent_conversions }}"
+              vddk_transport_supported: "{{ vddk_transport_supported }}"
+              ssh_transport_supported: "{{ ssh_transport_supported }}"
+              auth_user: "root"
+              vmware_vddk_package_url: "http://file.rdu.redhat.com/~istein/VMware-vix-disklib-6.7.1-10362358.x86_64.tar.gz"
+              conversion_host_ssh_private_key: "{{ ssh_key.stdout }}"
+  tags:
+    - miq_conversion_hosts_ansible
