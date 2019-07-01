@@ -38,7 +38,13 @@
   tags:
     - miq_set_provider_concurrent_vm_migration_max
 
-- import_tasks: miq_conversion_hosts_ansible.yml
+#- import_tasks: miq_conversion_hosts_ansible.yml
+#  tags:
+#    - miq_conversion_hosts_ansible
+
+- include_tasks: miq_conversion_hosts_ansible.yml
+  with_items:
+     -  "{{ groups['ovirt_conversion_hosts'] }}"
   tags:
     - miq_conversion_hosts_ansible
 
