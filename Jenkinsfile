@@ -6,13 +6,13 @@ properties(
         string(defaultValue: 'v2v-node', description: 'Name or label of slave to run on.', name: 'NODE_LABEL'),
         booleanParam(defaultValue: false, description: 'Nightly pre check.', name: 'MIQ_NIGHTLY_PRE_CHECK'),
         booleanParam(defaultValue: false, description: 'Remove existing instance.', name: 'MIQ_REMOVE_EXISTING_INSTANCE'),
-        string(defaultValue: '', description: 'GE/RHV FQDN. If left empty, the FQDN will be taken from source yaml.', name: 'RHV'),
+        string(defaultValue: '', description: 'GE FQDN. If left empty, the FQDN will be taken from source yaml.', name: 'GE'),
         string(defaultValue: '', description: 'The name of the main YAML file e.g. v2v-1. The file placed under rhevm-jenkins/qe/v2v/', name: 'SOURCE_YAML'),
         string(defaultValue: '', description: 'Image URL e.g. http://file.cloudforms.lab.eng.rdu2.redhat.com/builds/cfme/5.10/stable/cfme-rhevm-5.10.0.33-1.x86_64.qcow2', name: 'CFME_IMAGE_URL'),
         string(defaultValue: '', description: 'RHV hosts selection, separated by a comma e.g. 1,3-5,7. Leave empty to use ALL hosts.', name: 'RHV_HOSTS'),
         string(defaultValue: '', description: 'VMware hosts selection, separated by a comma e.g. 1,3-5,7. Leave empty to use ALL hosts.', name: 'VMW_HOSTS'),
-        string(defaultValue: '', description: 'The source VMware data storage type. If left empty, the type will be set accordingly to source YML file.', name: 'VMW_STORAGE_TYPE'),
-        string(defaultValue: '', description: 'The target RHV data storage type. If left empty, the type will be set accordingly to source YML file.', name: 'RHV_STORAGE_TYPE'),
+        string(defaultValue: '', description: 'The source VMware data storage type. If left empty, the type will be set accordingly to source YML file.', name: 'VMW_STORAGE_NAME'),
+        string(defaultValue: '', description: 'The target RHV data storage type. If left empty, the type will be set accordingly to source YML file.', name: 'RHV_STORAGE_NAME'),
         string(defaultValue: '', description: 'The number of hosts to be migrated.', name: 'NUMBER_OF_VMS'),
         string(defaultValue: 'regression_v2v_76_100_oct_2018', description: 'VMware Template name.', name: 'VMW_TEMPLATE_NAME'),
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
@@ -85,10 +85,10 @@ pipeline {
                                                       --provider_concurrent_max $PROVIDER_CONCURRENT_MAX \
                                                       --host_concurrent_max $HOST_CONCURRENT_MAX \
                                                       --v2v_ci_vmw_template $VMW_TEMPLATE_NAME \
-                                                      --v2v_ci_source_datastore "$VMW_STORAGE_TYPE" \
-                                                      --v2v_ci_target_datastore "$RHV_STORAGE_TYPE" \
+                                                      --v2v_ci_source_datastore "$VMW_STORAGE_NAME" \
+                                                      --v2v_ci_target_datastore "$RHV_STORAGE_NAME" \
                                                       --job_basename_url $JOB_BASE_NAME \
-                                                      --rhv_ge "$RHV"
+                                                      --rhv_ge "$GE"
 
             deactivate
             '''
