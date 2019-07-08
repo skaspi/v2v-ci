@@ -1,5 +1,4 @@
 @Library('rhv-qe-jenkins-library-khakimi@add_req_ansible') _
-@Library('rhv-qe-jenkins-library') _
 
 properties(
   [
