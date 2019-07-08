@@ -33,50 +33,50 @@ pipeline {
   }
   stages {
     lock(resource: $GE) {
-    stage ("Checkout jenkins repository") {
-      steps {
-        checkout(
-          [
-            $class: 'GitSCM',
-            branches: [[name: 'origin/master']],
-            doGenerateSubmoduleConfigurations: false,
-            extensions: [
-              [$class: 'RelativeTargetDirectory', relativeTargetDir: 'jenkins'],
-              [$class: 'CleanBeforeCheckout'],
-              [$class: 'CloneOption', depth: 0, noTags: false, reference: '', shallow: true],
-              [$class: 'PruneStaleBranch']
-            ],
-            submoduleCfg: [],
-            userRemoteConfigs: [[url: 'git://git.app.eng.bos.redhat.com/rhevm-jenkins.git']]
-          ]
-        )
-        sh '''echo "Executed from: v2v Jenkinsfile"
+      stage ("Checkout jenkins repository") {
+        steps {
+          checkout(
+            [
+              $class: 'GitSCM',
+              branches: [[name: 'origin/master']],
+              doGenerateSubmoduleConfigurations: false,
+              extensions: [
+                [$class: 'RelativeTargetDirectory', relativeTargetDir: 'jenkins'],
+                [$class: 'CleanBeforeCheckout'],
+                [$class: 'CloneOption', depth: 0, noTags: false, reference: '', shallow: true],
+                [$class: 'PruneStaleBranch']
+              ],
+              submoduleCfg: [],
+              userRemoteConfigs: [[url: 'git://git.app.eng.bos.redhat.com/rhevm-jenkins.git']]
+            ]
+          )
+          sh '''echo "Executed from: v2v Jenkinsfile"
 
-        if [ -d $WORKSPACE/jenkins ]
-        then
-          pushd $WORKSPACE/jenkins
-          echo $JENKINS_GERRIT_REFSPEC
-          for ref in $JENKINS_GERRIT_REFSPEC ;
-          do
-            git fetch git://git.app.eng.bos.redhat.com/rhevm-jenkins.git "$ref" && git cherry-pick FETCH_HEAD || (
-                echo \'!!! FAIL TO CHERRYPICK !!!\' "$ref" ; false
-            )
-          done
-          popd
-        fi
-        '''
+          if [ -d $WORKSPACE/jenkins ]
+          then
+            pushd $WORKSPACE/jenkins
+            echo $JENKINS_GERRIT_REFSPEC
+            for ref in $JENKINS_GERRIT_REFSPEC ;
+            do
+              git fetch git://git.app.eng.bos.redhat.com/rhevm-jenkins.git "$ref" && git cherry-pick FETCH_HEAD || (
+                  echo \'!!! FAIL TO CHERRYPICK !!!\' "$ref" ; false
+              )
+            done
+            popd
+          fi
+          '''
+        }
       }
-    }
 
-    stage ("Generating inventory and extra_vars") {
-      steps {
-        sh '''
-            rm -rf yaml_generator
-            virtualenv yaml_generator
-            source yaml_generator/bin/activate
-            pip install --upgrade pip
-            pip install pyyaml jinja2 pathlib
-            ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
+      stage ("Generating inventory and extra_vars") {
+        steps {
+          sh '''
+              rm -rf yaml_generator
+              virtualenv yaml_generator
+              source yaml_generator/bin/activate
+              pip install --upgrade pip
+              pip install pyyaml jinja2 pathlib
+              ${WORKSPACE}/jenkins/tools/v2v/v2v_env.py $SOURCE_YAML \
                                                       --inventory  ${WORKSPACE}/jenkins/qe/v2v/inventory \
                                                       --extra_vars ${WORKSPACE}/extra_vars.yml \
                                                       --trans_method $TRANSPORT_METHODS \
@@ -92,192 +92,192 @@ pipeline {
                                                       --job_basename_url $JOB_BASE_NAME \
                                                       --rhv_ge "$GE"
 
-            deactivate
-            '''
+              deactivate
+              '''
+        }
       }
-    }
 
-    stage ("ManageIQ/CloudForms Pre-Check Nightly") {
-      when {
-        expression { params.MIQ_NIGHTLY_PRE_CHECK }
+      stage ("ManageIQ/CloudForms Pre-Check Nightly") {
+        when {
+          expression { params.MIQ_NIGHTLY_PRE_CHECK }
+        }
+        steps {
+          ansible(
+            playbook: "miq_run_step.yml",
+            extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
+            tags: ['miq_pre_check_nightly']
+          )
+        }
       }
-      steps {
-        ansible(
-          playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
-          tags: ['miq_pre_check_nightly']
-        )
-      }
-    }
 
-    stage ("ManageIQ/CloudForms Remove existing instance") {
-      when {
-        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      stage ("ManageIQ/CloudForms Remove existing instance") {
+        when {
+          expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+        }
+        steps {
+          ansible(
+            playbook: "miq_run_step.yml",
+            extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
+            tags: ['miq_pre_check']
+          )
+        }
       }
-      steps {
-        ansible(
-          playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
-          tags: ['miq_pre_check']
-        )
-      }
-    }
 
-    stage ("ManageIQ/CloudForms Remove Pre-Check") {
-      when {
-        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      stage ("ManageIQ/CloudForms Remove Pre-Check") {
+        when {
+          expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+        }
+        steps {
+          ansible(
+            playbook: "miq_run_step.yml",
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_pre_check']
+          )
+        }
       }
-      steps {
-        ansible(
-          playbook: "miq_run_step.yml",
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_pre_check']
-        )
-      }
-    }
 
-    stage ("Deploy ManageIQ/CloudForms") {
-      when {
-        expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+      stage ("Deploy ManageIQ/CloudForms") {
+        when {
+          expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
+        }
+        steps {
+          ansible(
+            playbook: "miq_deploy.yml",
+            extraVars: ['@extra_vars.yml'],
+          )
+        }
       }
-      steps {
-        ansible(
-          playbook: "miq_deploy.yml",
-          extraVars: ['@extra_vars.yml'],
-        )
-      }
-    }
 
-    stage ('Create VMs') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_create_vms']
-        )
+      stage ('Create VMs') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_create_vms']
+          )
+        }
       }
-    }
 
-    stage ('Install Nmon') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_install_nmon']
-        )
+      stage ('Install Nmon') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_install_nmon']
+          )
+        }
       }
-    }
 
-    stage ('Add extra providers') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_add_extra_providers']
-        )
+      stage ('Add extra providers') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_add_extra_providers']
+          )
+        }
       }
-    }
 
-    stage ('Set RHV provider concurrent VM migration max') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_set_provider_concurrent_vm_migration_max']
-        )
+      stage ('Set RHV provider concurrent VM migration max') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_set_provider_concurrent_vm_migration_max']
+          )
+        }
       }
-    }
 
-    stage ('Conversion hosts enable') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_conversion_hosts_ansible']
-        )
+      stage ('Conversion hosts enable') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_conversion_hosts_ansible']
+          )
+        }
       }
-    }
 
-    stage ('Configure oVirt conversion hosts') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_config_ovirt_conversion_hosts']
-        )
+      stage ('Configure oVirt conversion hosts') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_config_ovirt_conversion_hosts']
+          )
+        }
       }
-    }
 
-    stage ('Configure ESX hosts') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_config_vmware_esx_hosts']
-        )
+      stage ('Configure ESX hosts') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_config_vmware_esx_hosts']
+          )
+        }
       }
-    }
 
 
-    stage ('Create transformation mappings') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_config_infra_mappings']
-        )
+      stage ('Create transformation mappings') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_config_infra_mappings']
+          )
+        }
       }
-    }
 
-    stage ('Create transformation plans') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_config_migration_plan']
-        )
+      stage ('Create transformation plans') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_config_migration_plan']
+          )
+        }
       }
-    }
 
-    stage ('Start performance monitoring') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_start_monitoring']
-        )
+      stage ('Start performance monitoring') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_start_monitoring']
+          )
+        }
       }
-    }
 
-    stage ('Execute transformation plans') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_order_migration_plan']
-        )
+      stage ('Execute transformation plans') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_order_migration_plan']
+          )
+        }
       }
-    }
 
-    stage ('Monitor transformation plans') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_monitor_transformations']
-        )
+      stage ('Monitor transformation plans') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_monitor_transformations']
+          )
+        }
       }
-    }
 
-    stage ('Stop performance monitoring') {
-      steps {
-        ansible(
-          playbook: 'miq_run_step.yml',
-          extraVars: ['@extra_vars.yml'],
-          tags: ['miq_stop_monitoring']
-        )
+      stage ('Stop performance monitoring') {
+        steps {
+          ansible(
+            playbook: 'miq_run_step.yml',
+            extraVars: ['@extra_vars.yml'],
+            tags: ['miq_stop_monitoring']
+          )
+        }
       }
+     }
     }
-   }
   }
-}
