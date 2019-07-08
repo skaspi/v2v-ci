@@ -31,8 +31,11 @@ pipeline {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
   }
-  stages {
-    lock(resource: $GE) {
+  stage ('Main Lock') {
+    options {
+     lock(resource: $GE)
+    }
+    stages {
       stage ("Checkout jenkins repository") {
         steps {
           checkout(
@@ -280,4 +283,4 @@ pipeline {
       }
      }
     }
-  }
+   }
