@@ -1,39 +1,71 @@
 ---
-- name: Add Conversion hosts
-  add_host:
-    name: "{{ item }}"
-    ansible_user: root
-    ansible_ssh_pass: "{{ hostvars[item].root_password }}"
-    ansible_pipelining: true
-  with_items:
-    -  "{{ groups['ovirt_conversion_hosts'] }}"
+- block:
+    - name: Find host JSON
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources&attributes=authentications"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: host_json
+      until: host_json.json.subcount == 1
+      retries: 30
+      delay: 60
 
-- name: Install latest {{ ovirt_ansible_conversion_host_package }} package
-  yum:
-    name: "{{ ovirt_ansible_conversion_host_package }}"
-    state: latest
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+    - set_fact:
+        query: "resources[?name=='{{ hostvars[item].rhv_host_name }}'].id"
 
-- name: Copy {{ extra_vars_file_name }} to the conversion hosts
-  copy: 
-    src: "{{ extra_vars_file_path }}{{ extra_vars_file_name }}"
-    dest: "{{ conversion_host_playbooks_path }}{{ extra_vars_file_name }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
+    - name: Extracting host id from JSON
+      set_fact:
+        host_id: "{{ host_json.json | json_query(query) | first }}"
 
-- name: Conversion host disable 
-  shell: ansible-playbook -i {{ item }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_disable.yml
-  args:
-    chdir: "{{ conversion_host_playbooks_path }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
-  ignore_errors: True
-
-- name: Conversion host enable
-  shell: ansible-playbook -i {{ item.0 }}, -c local -b -e @{{ extra_vars_file_name }} conversion_host_enable.yml
-  args:
-    chdir: "{{ conversion_host_playbooks_path }}"
-  delegate_to: "{{ item }}"
-  with_items: "{{ groups['ovirt_conversion_hosts'] }}"
-  ignore_errors: True
+    - name: Enable conversion host
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: create
+          resources:
+            - name: "{{ hostvars[item].rhv_host_name }}"
+              resource_type: "ManageIQ::Providers::Redhat::InfraManager::Host"
+              resource_id: "{{ host_id }}"
+              max_concurrent_tasks: 5
+              vddk_transport_supported: "{{vddk_transport_supported}}"
+              ssh_transport_supported: "{{ssh_transport_supported}}"
+              auth_user: "root"
+              vmware_vddk_package_url: "http://file.rdu.redhat.com/~istein/VMware-vix-disklib-6.7.1-10362358.x86_64.tar.gz"
+              conversion_host_ssh_private_key: |
+                -----BEGIN PRIVATE KEY-----
+                MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDX2Szh77eVv7nC
+                5TVG6LpiwMlQEZstbjFS08XGfnDLMozx1iaHd88LdKEmf6PJRSkqHCvLPNOc7hUd
+                lLjeUy/QGVOlHbrVliy1rblC7sapAE3jOTYSa74E4+ZPZ/1xvNbuccVv7fs207VJ
+                rMnKaVSmUpo9csMns5pnYdws0q1MN7Qh5BBAQRS6L+KVs2T7A3F5mSOClwsB8952
+                QlYWAyX3TBb19ERsx/A5IHSdBzSUewMbYS+wwrbEKCmnIVwI6lf0iawbIXbwQphH
+                Mpffhpi6RkYYpAokIJgKCUreM0kKR9/qQQlhlZCSPM9CQ1Kmdn750jPL83YY3G9Z
+                UON9qpabAgMBAAECggEAS7tFBhinXwEf2gO1h6WMD634dAFZYr0wzRDEaXpfdMvN
+                q+QpLIqauDg5elp6StnbMY0kyHAVBxB5lCFkI40oT2kzcdFWhi3kjfHf+F3ykcUr
+                jre6AwiOaQTU/7NKtyc8efis/zKOW5Q4HRtkyYHfU2PT/g9P7ZQUboVlTMy2RPD5
+                WcBCw8Omx8Kp2LW7rRGPxuKhijKu7dwVbXaZuMOmJdBgY6AVJ5Xvj8n6fjXnnXd6
+                kFp4aTq/0kj5bWsbLRnhIwqGPzTgGbM7bmjja3iSZVXb9NtDLRAItnQWpjogTCSD
+                lgnxChK8LgZTobhaLZdPoY/Uj8JrZU4KSVXhkk5/oQKBgQDyOP2iqenBlRGVpgi0
+                uS1Iiqw9V9oJ0CMkyjRUhdPXTTIEL+o2scfNTta5fCbdrWrNstzrlkSU7i3ogZ/y
+                m70sOOrm+7ZvbkBzsFreetrf1MXCKTdf5PC6ODcxe2+A0H47RxDkaI8AYiIwdeNR
+                4nJZKo6IPp/eSmSnr0CY9W3VKQKBgQDkICXnlgwI+zJHMsh/0XcSX0dMDM80zX4f
+                s/s428PQ3RvlneMfb6kEMLNLTZVY5C3BlDE/UcpLdoihfXP0xN+GNuRtmGzLzfH2
+                +ALKM1mmFQndN3dDe4Ql+wFQg7ur1S2DHrTi6Eiad3aKfZh+o81QQzDPEm0CONeT
+                Y5wpCn8iIwKBgBzhWqx4Ydyo723OXB9gLNwHXL37qY2d+XK7gT3KrxVuqNYC+IQI
+                8m+yRLvc561qrd9Uwi58vjSbqXGdcvq0Qvvw1WExBfGHTbv9fPgl4c7qSaH61BVk
+                8KbjaQFHXGYZddOPh54UMWi0SqtIgxASVdv3zQLFpL4WVKYBqUwTh0LxAoGBAKox
+                idXzTdtNfT89FfS2U31zc/+69sPQI66HWoAbBUZID84JMy964L/tjXY61ZdR9Qkd
+                BHjXDnOqZVkF/YK5doHtZhKVy2VpqoG0mnA8Sz/rJkbSYLoJ5pdnYp2tClCyZJgU
+                SqOW5MPJKLk95o1kq4Kb/kge2RD1U2/0usarvBm9AoGBAJ9TbcAh4DfTLmllrvZ2
+                drXnbQd5UsUmTTBM+WxK2TCX+Cycq+/kdfLoMwpR2URLFkNysLXIjRVl0uCzL5xB
+                0i3pfdRR8FV6qfJbaWYNCEF4bHgsVgUkBE1wsEUAzY7CmLrU8/Kd4l5YFM+duqmp
+                bFlCV9UxDczMTGqC8SgjmqLi
+                -----END PRIVATE KEY-----
+  tags:
+    - miq_conversion_hosts_ansible
