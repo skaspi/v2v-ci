@@ -170,10 +170,10 @@ pipeline {
         }
 
         stage ('Create VMs') {
-          when {
-            expression { ${stages.Create_VMs} }
-          }
           steps {
+            sh '''
+             echo ${stages.Create_VMs}
+            '''
             ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
