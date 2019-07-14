@@ -34,7 +34,7 @@ pipeline {
   stages {
   stage ('Main Lock') {
     options {
-     lock(resource: $GE)
+     lock(resource: "${GE}")
     }
     stages {
       stage ("Checkout jenkins repository") {
