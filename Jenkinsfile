@@ -31,6 +31,7 @@ pipeline {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
   }
+  stages {
   stage ('Main Lock') {
     options {
      lock(resource: $GE)
@@ -284,3 +285,4 @@ pipeline {
      }
     }
    }
+  }
