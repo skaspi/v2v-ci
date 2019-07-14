@@ -37,8 +37,9 @@ pipeline {
       options {
         lock(resource: "${GE}")
       }
-      script {
-        def stages = [Create_VMs:true,
+      steps {
+        script {
+          def stages = [Create_VMs:true,
                     Install_Nmon:true,
                     Add_extra_providers:true,
                     Set_RHV_provider_concurrent_VM_migration_max:true,
@@ -51,6 +52,7 @@ pipeline {
                     Execute_transformation_plans:true,
                     Monitor_transformation_plans:true,
                     Stop_performance_monitoring:true]
+        }
       }
       stages {
         stage ("Checkout jenkins repository") {
