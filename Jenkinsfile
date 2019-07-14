@@ -172,7 +172,7 @@ pipeline {
 
         stage ('Create VMs') {
           when {
-            expression ${stages.Create_VMs}
+            expression { ${stages.Create_VMs} }
           }
           steps {
             ansible(
