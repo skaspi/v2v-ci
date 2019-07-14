@@ -25,6 +25,7 @@ properties(
   ]
 )
 
+script{
 def stages = [Create_VMs:true,
                     Install_Nmon:true,
                     Add_extra_providers:true,
@@ -38,6 +39,7 @@ def stages = [Create_VMs:true,
                     Execute_transformation_plans:true,
                     Monitor_transformation_plans:true,
                     Stop_performance_monitoring:true]
+}
 
 pipeline {
   agent {
