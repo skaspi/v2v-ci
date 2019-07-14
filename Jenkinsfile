@@ -31,32 +31,27 @@ pipeline {
       label params.NODE_LABEL ? params.NODE_LABEL : null
     }
   }
+  script {
+      def stages = [Create_VMs:true,
+                    Install_Nmon:true,
+                    Add_extra_providers:true,
+                    Set_RHV_provider_concurrent_VM_migration_max:true,
+                    Conversion_hosts_enable:true,
+                    Configure_oVirt_conversion_hosts:true,
+                    Configure_ESX_hosts:true,
+                    Create_transformation_mappings:true,
+                    Create_transformation_plans:true,
+                    Start_performance_monitoring:true,
+                    Execute_transformation_plans:true,
+                    Monitor_transformation_plans:true,
+                    Stop_performance_monitoring:true]
+  }
   stages {
     stage ('Main Lock') {
       options {
         lock(resource: "${GE}")
       }
       stages {
-        stage ("Stages Choice") {
-          steps {
-            script {
-                    def stages = [Create_VMs:true,
-                                  Install_Nmon:true,
-                                  Add_extra_providers:true,
-                                  Set_RHV_provider_concurrent_VM_migration_max:true,
-                                  Conversion_hosts_enable:true,
-                                  Configure_oVirt_conversion_hosts:true,
-                                  Configure_ESX_hosts:true,
-                                  Create_transformation_mappings:true,
-                                  Create_transformation_plans:true,
-                                  Start_performance_monitoring:true,
-                                  Execute_transformation_plans:true,
-                                  Monitor_transformation_plans:true,
-                                  Stop_performance_monitoring:true]
-            }
-          }
-        }
-
         stage ("Checkout jenkins repository") {
           steps {
             checkout(
@@ -174,7 +169,7 @@ pipeline {
 
         stage ('Create VMs') {
           when {
-            expression { ${stages.Create_VMs} }
+            expression ${stages.Create_VMs}
           }
           steps {
             ansible(
