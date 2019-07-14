@@ -26,7 +26,7 @@ properties(
 )
 
 script{
-def stages = [Create_VMs:true,
+def stages_ = [Create_VMs:true,
                     Install_Nmon:true,
                     Add_extra_providers:true,
                     Set_RHV_provider_concurrent_VM_migration_max:true,
@@ -172,7 +172,7 @@ pipeline {
         stage ('Create VMs') {
           steps {
             sh '''
-             echo ${stages.Create_VMs}
+             echo ${stages_.Create_VMs}
             '''
             ansible(
               playbook: 'miq_run_step.yml',
