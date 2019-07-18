@@ -172,7 +172,7 @@ pipeline {
         stage ('Create VMs') {
           steps {
             sh '''
-             echo ${stages_.Create_VMs}
+             echo "${stages_.Create_VMs}"
             '''
             ansible(
               playbook: 'miq_run_step.yml',
