@@ -39,6 +39,7 @@ def stages_ = [Create_VMs:true,
                     Execute_transformation_plans:true,
                     Monitor_transformation_plans:true,
                     Stop_performance_monitoring:true]
+println "First Name: ${stages_.Create_VMs}"
 }
 
 pipeline {
@@ -92,6 +93,7 @@ pipeline {
         stage ("Generating inventory and extra_vars") {
           steps {
             sh '''
+                echo ${stages_.Create_VMs}
                 rm -rf yaml_generator
                 virtualenv yaml_generator
                 source yaml_generator/bin/activate
@@ -171,9 +173,6 @@ pipeline {
 
         stage ('Create VMs') {
           steps {
-            sh '''
-             echo "${stages_.Create_VMs}"
-            '''
             ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
