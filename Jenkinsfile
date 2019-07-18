@@ -39,6 +39,8 @@ def stages_ = [Create_VMs:true,
                     Execute_transformation_plans:true,
                     Monitor_transformation_plans:true,
                     Stop_performance_monitoring:true]
+}
+script{
 println "First Name: ${stages_.Create_VMs}"
 }
 
@@ -93,8 +95,6 @@ pipeline {
         stage ("Generating inventory and extra_vars") {
           steps {
             sh '''
-                echo hi
-                echo "${stages_.Create_VMs}"
                 rm -rf yaml_generator
                 virtualenv yaml_generator
                 source yaml_generator/bin/activate
