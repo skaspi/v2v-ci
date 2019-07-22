@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library-khakimi@add_req_ansible', 'rhv-qe-jenkins-library-dlaguoto@restart_from_stage']) _
+@Library(['rhv-qe-jenkins-library']) _
 
 properties(
   [
@@ -19,14 +19,15 @@ properties(
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans', 'Stop performance monitoring']),
+        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
+        booleanParam(defaultValue: false, description: 'If checked, this will be the ONLY stage to run', name: 'SINGLE_STAGE'),
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
     ),
   ]
 )
 
-def stages_ = other.get_current_stage("${START_FROM_STAGE}")
+def stages_ = other.get_v2v_current_stage(params.START_FROM_STAGE, params.SINGLE_STAGE)
 
 pipeline {
   agent {
@@ -40,6 +41,13 @@ pipeline {
         lock(resource: "${GE}")
       }
       stages {
+        stage ('Locked Resources') {
+          steps {
+            script {
+              log.info("Locked resources: ${GE}")
+            }
+          }
+        }
         stage ("Checkout jenkins repository") {
           steps {
             checkout(
@@ -109,7 +117,7 @@ pipeline {
             expression { params.MIQ_NIGHTLY_PRE_CHECK }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
               tags: ['miq_pre_check_nightly']
@@ -122,7 +130,7 @@ pipeline {
             expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
               tags: ['miq_pre_check']
@@ -135,7 +143,7 @@ pipeline {
             expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_pre_check']
@@ -148,7 +156,7 @@ pipeline {
             expression { params.MIQ_REMOVE_EXISTING_INSTANCE }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: "miq_deploy.yml",
               extraVars: ['@extra_vars.yml'],
             )
@@ -160,7 +168,7 @@ pipeline {
             expression { stages_['Create VMs'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_create_vms']
@@ -173,7 +181,7 @@ pipeline {
             expression { stages_['Install Nmon'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_install_nmon']
@@ -186,7 +194,7 @@ pipeline {
             expression { stages_['Add extra providers'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_add_extra_providers']
@@ -199,7 +207,7 @@ pipeline {
             expression { stages_['Set RHV provider concurrent VM migration max'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_set_provider_concurrent_vm_migration_max']
@@ -212,7 +220,7 @@ pipeline {
             expression { stages_['Conversion hosts enable'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_conversion_hosts_ansible']
@@ -225,7 +233,7 @@ pipeline {
             expression { stages_['Configure oVirt conversion hosts'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_ovirt_conversion_hosts']
@@ -238,7 +246,7 @@ pipeline {
             expression { stages_['Configure ESX hosts'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_vmware_esx_hosts']
@@ -252,7 +260,7 @@ pipeline {
             expression { stages_['Create transformation mappings'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_infra_mappings']
@@ -265,7 +273,7 @@ pipeline {
             expression { stages_['Create transformation plans'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_migration_plan']
@@ -278,7 +286,7 @@ pipeline {
             expression { stages_['Start performance monitoring'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_start_monitoring']
@@ -291,7 +299,7 @@ pipeline {
             expression { stages_['Execute transformation plans'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_order_migration_plan']
@@ -304,25 +312,21 @@ pipeline {
             expression { stages_['Monitor transformation plans'] }
           }
           steps {
-            ansible(
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_monitor_transformations']
             )
           }
         }
-
-        stage ('Stop performance monitoring') {
-          when {
-            expression { stages_['Stop performance monitoring'] }
-          }
-          steps {
-            ansible(
+      }
+      post {
+        always {
+            v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_stop_monitoring']
             )
-          }
         }
       }
     }
