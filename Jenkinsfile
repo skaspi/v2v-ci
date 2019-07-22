@@ -19,7 +19,7 @@ properties(
         choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans', 'Stop performance monitoring']),
+        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
         booleanParam(defaultValue: false, description: 'If checked, this will be the ONLY stage to run', name: 'SINGLE_STAGE'),
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
@@ -312,22 +312,9 @@ pipeline {
             )
           }
         }
-
-        stage ('Stop performance monitoring') {
-          when {
-            expression { stages_['Stop performance monitoring'] }
-          }
-          steps {
-            ansible(
-              playbook: 'miq_run_step.yml',
-              extraVars: ['@extra_vars.yml'],
-              tags: ['miq_stop_monitoring']
-            )
-          }
-        }
       }
       post {
-        failure {
+        always {
             ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
