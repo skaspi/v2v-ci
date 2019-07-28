@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library']) _
+@Library(['rhv-qe-jenkins-library@master']) _
 
 properties(
   [
@@ -325,8 +325,11 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_stop_monitoring']
+              tags: ['miq_stop_monitoring'],
+              verbosity: '-v'
             )
+            archiveArtifacts artifacts: 'cfme_logs/*.tar.gz'
+            archiveArtifacts artifacts: 'conv_logs/*.tar.gz'
         }
       }
     }
