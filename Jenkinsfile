@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library-khakimi@add_req_ansible', 'rhv-qe-jenkins-library-dlaguoto@shared_library_revision', 'rhv-qe-jenkins-library@master']) _
+@Library(['rhv-qe-jenkins-library']) _
 
 properties(
   [
@@ -43,7 +43,7 @@ pipeline {
       stages {
         stage ('Locked Resources') {
           steps {
-            script { 
+            script {
               log.info("Locked resources: ${GE}")
             }
           }
