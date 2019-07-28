@@ -9,10 +9,15 @@
     patterns: "*.tar.gz"
   register: log_file
 
+- name: Create CFME Log Directory
+  file:
+    path: ./cfme_logs
+    state: directory
+
 - name:  Get CFME log
   fetch:
     src: "{{ item.path }}"
-    dest: ./
+    dest: ./cfme_logs/
     flat: yes
   with_items: "{{ log_file.files }}"
   delegate_to: "{{ inventory_hostname }}"
@@ -45,10 +50,15 @@
     var: log_file
     verbosity: 2
 
+- name: Create Conversion Host Logs Directory
+  file:
+    path: ./conv_logs
+    state: directory
+
 - name:  Get Conversion hosts log
   fetch:
     src: "{{ item[1].files[0].path }}"
-    dest: ./
+    dest: ./conv_logs/
     flat: yes
   with_together:
     - "{{ groups['ovirt_conversion_hosts'] }}"

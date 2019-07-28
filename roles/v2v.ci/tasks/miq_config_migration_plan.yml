@@ -9,47 +9,62 @@
   register: migration_plan_json
 
 - block:
-
-  - name: Collect transformation mapping ID
-    uri:
-      url: "https://{{ inventory_hostname }}/api/transformation_mappings/?filter[]=name={{ v2v_ci_infra_mapping_name }}&expand=resources"
-      user: "{{ miq_app_username | default('admin') }}"
-      password: "{{ miq_app_password | default('smartvm') }}"
-      method: GET
-      validate_certs: no
-    register: infra_mapping_json
-
   - set_fact:
-      query: "resources[?name=='{{ v2v_ci_infra_mapping_name }}'].id"
+      query: "resources[?name=='{{ v2v_ci_migration_plan_name }}'].id"
 
-  - name: Extract infra mapping ID from JSON
+  - name: Extract migration plan ID from JSON
     set_fact:
-      infra_mapping_id: "{{ infra_mapping_json.json | json_query(query) | first }}"
+      migration_plan_id: "{{ migration_plan_json.json | json_query(query) | first }}"
 
-  - name: Collect target VM ids
+  - name: Remove migration plan if already exists
     uri:
-      url: "https://{{ inventory_hostname }}/api/vms/?filter[]=name={{ item | regex_replace (' ', '%20') }}&expand=resources&attributes=name&filter[]=vendor=vmware&filter[]=ems_id!=null"
+      url: "https://{{ inventory_hostname }}/api/service_templates/{{migration_plan_id}}"
       user: "{{ miq_app_username | default('admin') }}"
       password: "{{ miq_app_password | default('smartvm') }}"
-      method: GET
+      method: DELETE
+      status_code: 204
       validate_certs: no
-    register: vm_ids_json
-    with_items: "{{ v2v_ci_migration_plan_vms }}"
+  when: migration_plan_json.json.subcount != 0
 
-  - set_fact:
-      vm_query: "[*].json.resources[*].id"
+- name: Collect transformation mapping ID
+  uri:
+    url: "https://{{ inventory_hostname }}/api/transformation_mappings/?filter[]=name={{ v2v_ci_infra_mapping_name }}&expand=resources"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: GET
+    validate_certs: no
+  register: infra_mapping_json
 
-  - name: Extract target VM ids from JSON
-    set_fact:
-      vm_ids: "{{ vm_ids_json.results | json_query(vm_query) }}"
+- set_fact:
+    query: "resources[?name=='{{ v2v_ci_infra_mapping_name }}'].id"
 
-  - name: Create migration plan
-    uri:
-      url: "https://{{ inventory_hostname }}/api/service_templates"
-      user: "{{ miq_app_username | default('admin') }}"
-      password: "{{ miq_app_password | default('smartvm') }}"
-      method: POST
-      validate_certs: no
-      body_format: json
-      body: "{{ lookup('template', 'templates/migration_plan.j2') | from_yaml }}"
-  when: migration_plan_json.json.subcount == 0
+- name: Extract infra mapping ID from JSON
+  set_fact:
+    infra_mapping_id: "{{ infra_mapping_json.json | json_query(query) | first }}"
+
+- name: Collect target VM ids
+  uri:
+    url: "https://{{ inventory_hostname }}/api/vms/?filter[]=name={{ item | regex_replace (' ', '%20') }}&expand=resources&attributes=name&filter[]=vendor=vmware&filter[]=ems_id!=null"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: GET
+    validate_certs: no
+  register: vm_ids_json
+  with_items: "{{ v2v_ci_migration_plan_vms }}"
+
+- set_fact:
+    vm_query: "[*].json.resources[*].id"
+
+- name: Extract target VM ids from JSON
+  set_fact:
+    vm_ids: "{{ vm_ids_json.results | json_query(vm_query) }}"
+
+- name: Create migration plan
+  uri:
+    url: "https://{{ inventory_hostname }}/api/service_templates"
+    user: "{{ miq_app_username | default('admin') }}"
+    password: "{{ miq_app_password | default('smartvm') }}"
+    method: POST
+    validate_certs: no
+    body_format: json
+    body: "{{ lookup('template', 'templates/migration_plan.j2') | from_yaml }}"

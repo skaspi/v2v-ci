@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library']) _
+@Library(['rhv-qe-jenkins-library@master']) _
 
 properties(
   [
@@ -19,7 +19,7 @@ properties(
         choice(defaultValue: 'VDDK', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['VDDK', 'SSH']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
+        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'VMware hosts set public key', 'Conversion hosts enable', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
         booleanParam(defaultValue: false, description: 'If checked, this will be the ONLY stage to run', name: 'SINGLE_STAGE'),
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
@@ -215,19 +215,6 @@ pipeline {
           }
         }
 
-        stage ('Conversion hosts enable') {
-          when {
-            expression { stages_['Conversion hosts enable'] }
-          }
-          steps {
-            v2v_ansible(
-              playbook: 'miq_run_step.yml',
-              extraVars: ['@extra_vars.yml'],
-              tags: ['miq_conversion_hosts_ansible']
-            )
-          }
-        }
-
         stage ('Configure oVirt conversion hosts') {
           when {
             expression { stages_['Configure oVirt conversion hosts'] }
@@ -254,6 +241,31 @@ pipeline {
           }
         }
 
+         stage ('VMware hosts set public key') {
+          when {
+            expression { stages_['VMware hosts set public key'] }
+          }
+          steps {
+            v2v_ansible(
+              playbook: 'miq_run_step.yml',
+              extraVars: ['@extra_vars.yml'],
+              tags: ['vmware_hosts_set_public_key']
+            )
+          }
+        }
+
+        stage ('Conversion hosts enable') {
+          when {
+            expression { stages_['Conversion hosts enable'] }
+          }
+          steps {
+            v2v_ansible(
+              playbook: 'miq_run_step.yml',
+              extraVars: ['@extra_vars.yml'],
+              tags: ['miq_conversion_hosts_ansible']
+            )
+          }
+        }
 
         stage ('Create transformation mappings') {
           when {
@@ -325,8 +337,11 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_stop_monitoring']
+              tags: ['miq_stop_monitoring'],
+              verbosity: '-v'
             )
+            archiveArtifacts artifacts: 'cfme_logs/*.tar.gz'
+            archiveArtifacts artifacts: 'conv_logs/*.tar.gz'
         }
       }
     }
