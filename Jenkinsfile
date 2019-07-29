@@ -16,7 +16,7 @@ properties(
         string(defaultValue: '', description: 'The target RHV data storage type. If left empty, the type will be set accordingly to source YML file', name: 'RHV_STORAGE_NAME'),
         string(defaultValue: '', description: 'The number of hosts to be migrated', name: 'NUMBER_OF_VMS'),
         string(defaultValue: 'regression_v2v_76_100_oct_2018', description: 'VMware Template name', name: 'VMW_TEMPLATE_NAME'),
-        choice(defaultValue: 'SSH', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['SSH', 'VDDK']),
+        choice(defaultValue: 'VDDK', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['VDDK', 'SSH']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
         choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Conversion hosts enable', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
@@ -36,7 +36,7 @@ pipeline {
     }
   }
   stages {
-    stage ('Main Lock') {
+    stage ('Main Stage') {
       options {
         lock(resource: "${GE}")
       }
@@ -120,7 +120,8 @@ pipeline {
             v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
-              tags: ['miq_pre_check_nightly']
+              tags: ['miq_pre_check_nightly'],
+              verbosity: ''
             )
           }
         }
@@ -133,7 +134,8 @@ pipeline {
             v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
-              tags: ['miq_pre_check']
+              tags: ['miq_pre_check'],
+              verbosity: ''
             )
           }
         }
@@ -146,7 +148,8 @@ pipeline {
             v2v_ansible(
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_pre_check']
+              tags: ['miq_pre_check'],
+              verbosity: ''
             )
           }
         }
@@ -159,6 +162,7 @@ pipeline {
             v2v_ansible(
               playbook: "miq_deploy.yml",
               extraVars: ['@extra_vars.yml'],
+              verbosity: ''
             )
           }
         }
@@ -171,7 +175,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_create_vms']
+              tags: ['miq_create_vms'],
+              verbosity: ''
             )
           }
         }
@@ -184,7 +189,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_install_nmon']
+              tags: ['miq_install_nmon'],
+              verbosity: ''
             )
           }
         }
@@ -197,7 +203,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_add_extra_providers']
+              tags: ['miq_add_extra_providers'],
+              verbosity: ''
             )
           }
         }
@@ -210,7 +217,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_set_provider_concurrent_vm_migration_max']
+              tags: ['miq_set_provider_concurrent_vm_migration_max'],
+              verbosity: ''
             )
           }
         }
@@ -223,7 +231,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_conversion_hosts_ansible']
+              tags: ['miq_conversion_hosts_ansible'],
+              verbosity: ''
             )
           }
         }
@@ -236,7 +245,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_config_ovirt_conversion_hosts']
+              tags: ['miq_config_ovirt_conversion_hosts'],
+              verbosity: ''
             )
           }
         }
@@ -249,7 +259,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_config_vmware_esx_hosts']
+              tags: ['miq_config_vmware_esx_hosts'],
+              verbosity: ''
             )
           }
         }
@@ -263,7 +274,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_config_infra_mappings']
+              tags: ['miq_config_infra_mappings'],
+              verbosity: ''
             )
           }
         }
@@ -276,7 +288,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_config_migration_plan']
+              tags: ['miq_config_migration_plan'],
+              verbosity: ''
             )
           }
         }
@@ -289,7 +302,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_start_monitoring']
+              tags: ['miq_start_monitoring'],
+              verbosity: ''
             )
           }
         }
@@ -302,7 +316,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_order_migration_plan']
+              tags: ['miq_order_migration_plan'],
+              verbosity: ''
             )
           }
         }
@@ -315,7 +330,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_monitor_transformations']
+              tags: ['miq_monitor_transformations'],
+              verbosity: ''
             )
           }
         }
