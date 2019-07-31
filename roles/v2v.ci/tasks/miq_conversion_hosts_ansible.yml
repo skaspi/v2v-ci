@@ -60,6 +60,26 @@
 
     - debug: msg="{{ssh_key.stdout}}"
 
+#    - name: Enable conversion host
+#      uri:
+#        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
+#        user: "{{ miq_app_username | default('admin') }}"
+#        password: "{{ miq_app_password | default('smartvm') }}"
+#        method: POST
+#        validate_certs: no
+#        body_format: json
+#        body:
+#          action: create
+#          resources:
+#            - name: "{{ hostvars[item].rhv_host_name }}"
+#              resource_type: "ManageIQ::Providers::Redhat::InfraManager::Host"
+#              resource_id: "{{ host_id }}"
+#              max_concurrent_tasks: "{{ v2v_max_concurrent_conversions }}"
+#              auth_user: "root"
+#              vmware_vddk_package_url: "{{ vmware_vddk_package_url }}"
+#              conversion_host_ssh_private_key: "{{ ssh_key.stdout }}"
+#              vmware_ssh_private_key: "{{ vmware_ssh_private_key }}"
+
     - name: Enable conversion host
       uri:
         url: "https://{{ inventory_hostname }}/api/conversion_hosts"
@@ -76,8 +96,8 @@
               resource_id: "{{ host_id }}"
               max_concurrent_tasks: "{{ v2v_max_concurrent_conversions }}"
               auth_user: "root"
-              vmware_vddk_package_url: "{{ vmware_vddk_package_url }}"
+              vmware_vddk_package_url: "{{ v2v_vddk_package_url }}"
               conversion_host_ssh_private_key: "{{ ssh_key.stdout }}"
-              vmware_ssh_private_key: "{{ vmware_ssh_private_key }}"
+              vmware_ssh_private_key: null
   tags:
     - miq_conversion_hosts_ansible
