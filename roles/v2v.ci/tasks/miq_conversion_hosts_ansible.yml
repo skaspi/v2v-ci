@@ -1,5 +1,32 @@
 ---
 - block:
+    - name: Check if conversion host already exists
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: conversion_host_json
+
+    - block:
+        - set_fact:
+            query: "resources[?name=='{{ hostvars[item].rhv_host_name }}'].id"
+
+        - name: Extract conversion host ID from JSON
+          set_fact:
+            conversion_host_id: "{{ conversion_host_json.json | json_query(query) | first }}"
+
+        - name: Remove conversion host if already exists
+          uri:
+            url: "https://{{ inventory_hostname }}/api/conversion_hosts/{{conversion_host_id}}"
+            user: "{{ miq_app_username | default('admin') }}"
+            password: "{{ miq_app_password | default('smartvm') }}"
+            method: DELETE
+            status_code: 204
+            validate_certs: no
+      when: conversion_host_json.json.subcount != 0
+
     - name: Find host JSON
       uri:
         url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources&attributes=authentications"
@@ -48,10 +75,9 @@
               resource_type: "ManageIQ::Providers::Redhat::InfraManager::Host"
               resource_id: "{{ host_id }}"
               max_concurrent_tasks: "{{ v2v_max_concurrent_conversions }}"
-              vddk_transport_supported: "{{ vddk_transport_supported }}"
-              ssh_transport_supported: "{{ ssh_transport_supported }}"
               auth_user: "root"
-              vmware_vddk_package_url: "http://file.rdu.redhat.com/~istein/VMware-vix-disklib-6.7.1-10362358.x86_64.tar.gz"
+              vmware_vddk_package_url: "{{ vmware_vddk_package_url }}"
               conversion_host_ssh_private_key: "{{ ssh_key.stdout }}"
+              vmware_ssh_private_key: "{{ vmware_ssh_private_key }}"
   tags:
     - miq_conversion_hosts_ansible

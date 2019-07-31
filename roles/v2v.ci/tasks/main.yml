@@ -38,16 +38,6 @@
   tags:
     - miq_set_provider_concurrent_vm_migration_max
 
-#- import_tasks: miq_conversion_hosts_ansible.yml
-#  tags:
-#    - miq_conversion_hosts_ansible
-
-- include_tasks: miq_conversion_hosts_ansible.yml
-  with_items:
-     -  "{{ groups['ovirt_conversion_hosts'] }}"
-  tags:
-    - miq_conversion_hosts_ansible
-
 - include_tasks: miq_config_ovirt_conversion_hosts.yml
   with_items:
     -  "{{ groups['ovirt_conversion_hosts'] }}"
@@ -59,6 +49,16 @@
     -  "{{ groups['vmware_esx_hosts'] }}"
   tags:
     - miq_config_vmware_esx_hosts
+
+- include_tasks: vmware_hosts_set_public_key.yml
+  tags:
+    - vmware_hosts_set_public_key
+
+- include_tasks: miq_conversion_hosts_ansible.yml
+  with_items:
+     -  "{{ groups['ovirt_conversion_hosts'] }}"
+  tags:
+    - miq_conversion_hosts_ansible
 
 - import_tasks: miq_config_infra_mappings.yml
   tags:
