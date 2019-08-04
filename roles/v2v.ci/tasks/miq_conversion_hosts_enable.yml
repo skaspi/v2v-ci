@@ -1,0 +1,126 @@
+---
+- block:
+    - name: Find host JSON
+      uri:
+        url: "https://{{ inventory_hostname }}/api/hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources&attributes=authentications"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: host_json
+      until: host_json.json.subcount == 1
+      retries: 30
+      delay: 60
+
+    - set_fact:
+        query: "resources[?name=='{{ hostvars[item].rhv_host_name }}'].id"
+
+    - name: Extracting host id from JSON
+      set_fact:
+        host_id: "{{ host_json.json | json_query(query) | first }}"
+
+    - name: Look for conversion host {{ hostvars[item].rhv_host_name }}
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: conversion_host_json
+
+    - block:
+        - set_fact:
+            query: "resources[?name=='{{ hostvars[item].rhv_host_name }}'].id"
+
+        - name: Extract conversion host ID from JSON
+          set_fact:
+             conversion_host_id: "{{ conversion_host_json.json | json_query(query) | first }}"
+
+        - name: Remove conversion host {{ hostvars[item].rhv_host_name }}
+          uri:
+            url: "https://{{ inventory_hostname }}/api/conversion_hosts/{{conversion_host_id}}"
+            user: "{{ miq_app_username | default('admin') }}"
+            password: "{{ miq_app_password | default('smartvm') }}"
+            method: DELETE
+            status_code: 204
+            validate_certs: no
+
+        - name: Wait until conversion host {{ hostvars[item].rhv_host_name }} is removed
+          uri:
+            url: "https://{{ inventory_hostname }}/api/conversion_hosts/?filter[]=name={{ hostvars[item].rhv_host_name }}&expand=resources"
+            user: "{{ miq_app_username | default('admin') }}"
+            password: "{{ miq_app_password | default('smartvm') }}"
+            method: GET
+            validate_certs: no
+            return_content: yes
+          register: conversion_host_post_remove_json
+          until: conversion_host_post_remove_json.json.subcount == 0
+          retries: 60
+          delay: 30
+      when: conversion_host_json.json.subcount != 0
+
+    - name: Add RHV Engine host to inventory
+      add_host:
+        name: "{{ v2v_ci_rhv_hostname }}"
+        ansible_user: "root"
+        ansible_ssh_pass: "{{ v2v_ci_rhv_root_password }}"
+        ansible_pipelining: true
+
+    - name: Read RHV Engine SSH Private key
+      delegate_to: "{{ v2v_ci_rhv_hostname }}"
+      shell: tail -n +4 /etc/pki/ovirt-engine/keys/engine_id_rsa
+      register: ssh_key
+
+#    - debug: msg="{{ssh_key.stdout}}"
+
+    - name: Enable conversion host {{ hostvars[item].rhv_host_name }}
+      uri:
+        url: "https://{{ inventory_hostname }}/api/conversion_hosts"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: POST
+        validate_certs: no
+        body_format: json
+        body:
+          action: create
+          resources:
+            - name: "{{ hostvars[item].rhv_host_name }}"
+              resource_type: "ManageIQ::Providers::Redhat::InfraManager::Host"
+              resource_id: "{{ host_id }}"
+              max_concurrent_tasks: "{{ v2v_max_concurrent_conversions }}"
+              auth_user: "root"
+              vmware_vddk_package_url: "{{ vmware_vddk_package_url }}"
+              conversion_host_ssh_private_key: "{{ ssh_key.stdout }}"
+              vmware_ssh_private_key: "{{ vmware_ssh_private_key }}"
+      register: enable_conversion_host_json
+
+ #   - debug: msg="{{enable_conversion_host_json.json.results[0].task_href}}"
+
+    - name: Check enable conversion host task url is valid
+      uri:
+        url: "https://{{ inventory_hostname }}/api/tasks/?filter[]=id={{enable_conversion_host_json.json.results[0].task_id}}"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+        return_content: yes
+      register: task_json
+      until: task_json.json.subcount == 1
+      retries: 20
+      delay: 5
+
+
+    - name: Check enable conversion host task has ended
+      uri:
+        url: "{{enable_conversion_host_json.json.results[0].task_href}}"
+        user: "{{ miq_app_username | default('admin') }}"
+        password: "{{ miq_app_password | default('smartvm') }}"
+        method: GET
+        validate_certs: no
+      register: task_json
+      until: task_json.json.state == "Finished"
+      retries: 20
+      delay: 30
+
+  tags:
+    - miq_conversion_hosts_enable

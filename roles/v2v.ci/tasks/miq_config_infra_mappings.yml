@@ -92,7 +92,7 @@
 
     - name: Get target lan ID
       uri:
-        url: "https://{{ inventory_hostname }}/api/lans/?filter[]=name={{ v2v_ci_target_lan }}&expand=resources"
+        url: "https://{{ inventory_hostname }}/api/clusters/{{ target_cluster_id }}?attributes=lans&expand=resources"
         user: "{{ miq_app_username | default('admin') }}"
         password: "{{ miq_app_password | default('smartvm') }}"
         method: GET
@@ -100,9 +100,9 @@
       register: target_lan_json
 
     - set_fact:
-        query: "resources[?name=='{{ v2v_ci_target_lan }}'].id"
+        query: "lans[?name=='{{ v2v_ci_target_lan }}'].id"
 
-    - name: Extracting source datastore id from JSON
+    - name: Extracting target lan id from JSON
       set_fact:
         target_lan_id: "{{ target_lan_json.json | json_query(query) | first }}"
 

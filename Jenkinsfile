@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library@master'])  _
+@Library(['rhv-qe-jenkins-library@master']) _
 
 properties(
   [
@@ -19,8 +19,9 @@ properties(
         choice(defaultValue: 'VDDK', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['VDDK', 'SSH']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'VMware hosts set public key', 'Conversion hosts enable', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
+        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'vmware hosts set public key', 'Conversion hosts enable', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
         booleanParam(defaultValue: false, description: 'If checked, this will be the ONLY stage to run', name: 'SINGLE_STAGE'),
+        choice(defaultValue: '', description: 'Specify the verbosity level of running stages', name: 'VERBOSITY_LEVEL', choices: ['', '-v', '-vv', '-vvv']),
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
       ]
     ),
@@ -121,7 +122,7 @@ pipeline {
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check_nightly=true'],
               tags: ['miq_pre_check_nightly'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -135,7 +136,7 @@ pipeline {
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml', 'miq_pre_check=true', 'v2v_ci_miq_vm_force_remove=true'],
               tags: ['miq_pre_check'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -149,7 +150,7 @@ pipeline {
               playbook: "miq_run_step.yml",
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_pre_check'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -162,7 +163,7 @@ pipeline {
             v2v_ansible(
               playbook: "miq_deploy.yml",
               extraVars: ['@extra_vars.yml'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -176,7 +177,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_create_vms'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -190,7 +191,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_install_nmon'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -204,7 +205,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_add_extra_providers'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -218,7 +219,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_set_provider_concurrent_vm_migration_max'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -231,8 +232,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              verbosity: '',
-              tags: ['miq_config_ovirt_conversion_hosts']
+              tags: ['miq_config_ovirt_conversion_hosts'],
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -245,22 +246,22 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              verbosity: '',
-              tags: ['miq_config_vmware_esx_hosts']
+              tags: ['miq_config_vmware_esx_hosts'],
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
 
-        stage ('VMware hosts set public key') {
+        stage ('vmware hosts set public key') {
           when {
-            expression { stages_['VMware hosts set public key'] }
+            expression { stages_['vmware hosts set public key'] }
           }
           steps {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              verbosity: '',
-              tags: ['vmware_hosts_set_public_key']
+              tags: ['vmware_hosts_set_public_key'],
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -273,7 +274,8 @@ pipeline {
             v2v_ansible(
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
-              tags: ['miq_conversion_hosts_ansible']
+              tags: ['miq_conversion_hosts_enable'],
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -287,7 +289,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_infra_mappings'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -301,7 +303,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_migration_plan'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -315,7 +317,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_start_monitoring'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -329,7 +331,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_order_migration_plan'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -343,7 +345,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_monitor_transformations'],
-              verbosity: ''
+              verbosity: params.VERBOSITY_LEVEL
             )
           }
         }
@@ -354,7 +356,7 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_stop_monitoring'],
-              verbosity: '-v'
+              verbosity: params.VERBOSITY_LEVEL
             )
             archiveArtifacts artifacts: 'cfme_logs/*.tar.gz'
             archiveArtifacts artifacts: 'conv_logs/*.tar.gz'
