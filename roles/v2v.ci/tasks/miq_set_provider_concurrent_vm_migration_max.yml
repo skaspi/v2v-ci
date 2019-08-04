@@ -1,5 +1,32 @@
 ---
 - block:
+
+
+  - name: Add VMware hosts
+    add_host:
+      name: "{{ item }}"
+      ansible_user: root
+      ansible_ssh_pass: "{{ hostvars[item].root_password }}"
+      ansible_pipelining: true
+    with_items:
+      -  "{{ groups['vmware_esx_hosts'][0] }}"
+
+  - name: Set parameters
+    set_fact:
+      sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+VjThdZR0QfUCLtU/pIHsrOm5l7YOQ2t5SuWJuia8HWwsL2P2ghunQmQNOwtLVaj5Yge7w1uGMUBIxrwg8vjJ0gqub7eecN+6aCijJaC88+0R17b6r49CKwd3Tspl9ZcZ1Ou8esoBtzwaEvCupuw/UE5pnTnNbiUaV8y7FQChNssIiNnyE6BfRUJJsBw2R2/VdIwfISVdNWjdUFlMjeQuaJLSNTN/FTKs1UVrJCedRX3lZb8OEhtzAaREsh86Y+UmR5/2r1DnLU2pmaua99vETiNi1NJ/OhpWMmG1oFOz5AHXnndt/N7/X4/ogMoMWxBRi+jwJCBR53NXxX9nEUUb root@localhost.localdomain'
+
+  - name: Add new public key to remote authorized_keys file
+    delegate_to: "{{ item }}"
+    authorized_key:
+      key: "{{ sshPublicKey }}"
+      user:  "{{ ansible_ssh_user }}"
+      state: present
+      exclusive: no
+      path: /etc/ssh/keys-root/authorized_keys
+    with_items:
+      -  "{{ groups['vmware_esx_hosts'][0] }}"
+
+
   - name: Get RHV provider ID
     uri:
       url: "https://{{ inventory_hostname }}/api/providers/?filter[]=name={{ v2v_ci_rhv_name }}&expand=resources"
