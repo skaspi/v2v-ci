@@ -1,4 +1,4 @@
-@Library(['rhv-qe-jenkins-library-dlaguoto@add-verbosity-level']) _
+@Library(['rhv-qe-jenkins-library@master']) _
 
 properties(
   [

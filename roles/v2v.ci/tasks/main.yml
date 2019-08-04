@@ -50,7 +50,7 @@
   tags:
     - miq_config_vmware_esx_hosts
 
-- include_tasks: vmware_hosts_set_public_key.yml
+- import_tasks: vmware_hosts_set_public_key.yml
   tags:
     - vmware_hosts_set_public_key
 
