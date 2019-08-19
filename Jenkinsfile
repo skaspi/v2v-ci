@@ -344,8 +344,13 @@ pipeline {
               tags: ['miq_stop_monitoring'],
               verbosity: params.VERBOSITY_LEVEL
             )
-            archiveArtifacts artifacts: 'cfme_logs/*.tar.gz'
-            archiveArtifacts artifacts: 'conv_logs/*.tar.gz'
+            script {
+              def JOB_URL = "${JOB_BASE_NAME}"
+              if (JOB_URL.contains('prod')) {
+                archiveArtifacts artifacts: 'cfme_logs/*.tar.gz'
+                archiveArtifacts artifacts: 'conv_logs/*.tar.gz'
+              }
+            }
         }
       }
     }
