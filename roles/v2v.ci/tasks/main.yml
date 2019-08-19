@@ -50,6 +50,10 @@
   tags:
     - miq_config_vmware_esx_hosts
 
+- import_tasks: vmware_hosts_set_public_key.yml
+  tags:
+    - vmware_hosts_set_public_key
+
 - include_tasks: miq_conversion_hosts_enable.yml
   with_items:
      -  "{{ groups['ovirt_conversion_hosts'] }}"

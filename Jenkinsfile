@@ -19,7 +19,7 @@ properties(
         choice(defaultValue: 'VDDK', description: 'Migration Protocol - SSH/VDDK', name: 'TRANSPORT_METHODS', choices: ['VDDK', 'SSH']),
         string(defaultValue: '20', description: 'Provider concurrent migration max num of VMs', name: 'PROVIDER_CONCURRENT_MAX'),
         string(defaultValue: '10', description: 'Host concurrent migration max num of VMs', name: 'HOST_CONCURRENT_MAX'),
-        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'Conversion hosts enable', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
+        choice(defaultValue: 'Create VMs', description: 'Specify a stage to run from', name: 'START_FROM_STAGE', choices: ['Create VMs', 'Install Nmon', 'Add extra providers', 'Set RHV provider concurrent VM migration max', 'Configure oVirt conversion hosts', 'Configure ESX hosts', 'vmware hosts set public key', 'Conversion hosts enable', 'Create transformation mappings', 'Create transformation plans', 'Start performance monitoring', 'Execute transformation plans', 'Monitor transformation plans']),
         booleanParam(defaultValue: false, description: 'If checked, this will be the ONLY stage to run', name: 'SINGLE_STAGE'),
         choice(defaultValue: '', description: 'Specify the verbosity level of running stages', name: 'VERBOSITY_LEVEL', choices: ['', '-v', '-vv', '-vvv']),
         string(defaultValue: '', description: 'Gerrit refspec for cherry pick', name: 'JENKINS_GERRIT_REFSPEC')
@@ -247,6 +247,20 @@ pipeline {
               playbook: 'miq_run_step.yml',
               extraVars: ['@extra_vars.yml'],
               tags: ['miq_config_vmware_esx_hosts'],
+              verbosity: params.VERBOSITY_LEVEL
+            )
+          }
+        }
+
+        stage ('vmware hosts set public key') {
+          when {
+            expression { stages_['vmware hosts set public key'] }
+          }
+          steps {
+            v2v_ansible(
+              playbook: 'miq_run_step.yml',
+              extraVars: ['@extra_vars.yml'],
+              tags: ['vmware_hosts_set_public_key'],
               verbosity: params.VERBOSITY_LEVEL
             )
           }
